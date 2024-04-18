@@ -1,8 +1,8 @@
 ---
-import { getCollection } from 'astro:content';
+import { getCollection } from "astro:content";
 
 export async function getStaticPaths() {
-  const demoEntries = await getCollection('demos');
+  const demoEntries = await getCollection("demos");
   return demoEntries.map((entry) => ({
     params: { slug: entry.slug },
     props: { entry },
@@ -16,3 +16,11 @@ const { Content } = await entry.render();
 ---
 
 <Content />
+
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+</style>
