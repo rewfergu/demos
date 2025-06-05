@@ -1,0 +1,328 @@
+<script defer src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+></script>
+<link
+  href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+  rel="stylesheet"
+/>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  #map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+  }
+  #controls {
+    position: absolute;
+    top: 120px;
+    right: 10px;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+  select,
+  button {
+    margin: 5px;
+    padding: 5px;
+  }
+</style>
+<div id="controls">
+  <select id="patternSelect">
+    <option value="circles">Circles</option>
+    <option value="grid">Grid</option>
+    <option value="hexagons">Hexagons</option>
+    <option value="waves">Waves</option>
+  </select>
+  <button onclick="window.updatePattern()">Update Pattern</button>
+  <br />
+  <label
+    >Scale: <input
+      type="range"
+      id="scaleSlider"
+      min="0.5"
+      max="3"
+      step="0.1"
+      value="1"
+    /></label
+  >
+</div>
+<div id="map"></div>
+
+<script is:inline>
+  window.updatePattern = () => false;
+  document
+    .querySelector('script[src*="maplibre-gl"]')
+    .addEventListener("load", function () {
+      class SVGTileSource {
+        constructor(options = {}) {
+          this.tileSize = options.tileSize || 256;
+          this.tileCache = new Map();
+          this.pattern = options.pattern || "circles";
+          this.scale = options.scale || 1;
+          this.maxCacheSize = options.maxCacheSize || 1000;
+        }
+
+        // Main method to get tile data
+        async getTileUrl(z, x, y) {
+          const tileKey = `${z}-${x}-${y}-${this.pattern}-${this.scale}`;
+
+          if (this.tileCache.has(tileKey)) {
+            return this.tileCache.get(tileKey);
+          }
+
+          const tileDataUrl = await this.generateTileFromSVG(z, x, y);
+          //   console.log("tileDataUrl", tileDataUrl);
+
+          // Simple LRU cache management
+          if (this.tileCache.size > this.maxCacheSize) {
+            const firstKey = this.tileCache.keys().next().value;
+            this.tileCache.delete(firstKey);
+          }
+
+          this.tileCache.set(tileKey, tileDataUrl);
+          return tileDataUrl;
+        }
+
+        // Generate SVG pattern based on tile coordinates and zoom level
+        generateTileFromSVG(z, x, y) {
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = this.tileSize;
+          const ctx = canvas.getContext("2d");
+
+          // Calculate pattern parameters based on zoom level
+          const zoomScale = Math.pow(2, z - 10); // Adjust base zoom level as needed
+          const patternSize =
+            32 * this.scale * Math.max(0.5, Math.min(2, zoomScale));
+
+          // Create SVG string based on pattern type
+          const svgString = this.createSVGPattern(patternSize, x, y, z);
+          //   console.log("svgString", svgString);
+
+          // Convert SVG to canvas
+          const img = new Image();
+          const svgBlob = new Blob([svgString], {
+            type: "image/svg+xml;charset=utf-8",
+          });
+          const url = URL.createObjectURL(svgBlob);
+
+          // Return a promise that resolves to data URL
+          return new Promise((resolve) => {
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, this.tileSize, this.tileSize);
+              URL.revokeObjectURL(url);
+              resolve(canvas.toDataURL());
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              // Return a simple colored tile as fallback
+              ctx.fillStyle = "#f0f0f0";
+              ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+              resolve(canvas.toDataURL());
+            };
+            img.src = url;
+          });
+        }
+
+        // Create different SVG patterns
+        createSVGPattern(patternSize, tileX, tileY, zoom) {
+          const size = this.tileSize;
+          let patternDef = "";
+          let patternUse = "";
+
+          // Add tile-specific offset for seamless tiling
+          const offsetX = (tileX * size) % patternSize;
+          const offsetY = (tileY * size) % patternSize;
+
+          switch (this.pattern) {
+            case "circles":
+              patternDef = `
+                            <pattern id="circlePattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize}" fill="#e8f4f8"/>
+                                <circle cx="${patternSize / 2}" cy="${patternSize / 2}" r="${patternSize / 8}" fill="#4a90e2" opacity="0.6"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#circlePattern)"/>`;
+              break;
+
+            case "grid":
+              patternDef = `
+                            <pattern id="gridPattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize}" fill="#f9f9f9"/>
+                                <path d="M ${patternSize} 0 L 0 0 0 ${patternSize}" fill="none" stroke="#ddd" stroke-width="1"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#gridPattern)"/>`;
+              break;
+
+            case "hexagons":
+              const hexSize = patternSize / 3;
+              const hexHeight = hexSize * Math.sqrt(3);
+              patternDef = `
+                            <pattern id="hexPattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${hexHeight}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${hexHeight}" fill="#f0f8ff"/>
+                                <polygon points="${hexSize / 2},0 ${hexSize * 1.5},0 ${hexSize * 2},${hexHeight / 2} ${hexSize * 1.5},${hexHeight} ${hexSize / 2},${hexHeight} 0,${hexHeight / 2}" 
+                                         fill="none" stroke="#6b73ff" stroke-width="1"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#hexPattern)"/>`;
+              break;
+
+            case "waves":
+              patternDef = `
+                            <pattern id="wavePattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize / 2}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize / 2}" fill="#fff5f5"/>
+                                <path d="M0,${patternSize / 4} Q${patternSize / 4},0 ${patternSize / 2},${patternSize / 4} T${patternSize},${patternSize / 4}" 
+                                      fill="none" stroke="#ff6b9d" stroke-width="2"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#wavePattern)"/>`;
+              break;
+          }
+
+          return `
+                    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            ${patternDef}
+                        </defs>
+                        ${patternUse}
+                    </svg>
+                `;
+        }
+
+        // Update pattern and clear cache
+        updatePattern(pattern, scale) {
+          this.pattern = pattern;
+          this.scale = scale;
+          this.tileCache.clear();
+        }
+      }
+
+      // Custom tile loading implementation
+      async function loadSVGTile(tile, callback, svgTileSource) {
+        const { z, x, y } = tile.tileID.canonical;
+
+        const tileDataUrl = await svgTileSource.getTileUrl(z, x, y);
+
+        console.log("tileDataUrl", tileDataUrl);
+
+        const img = new Image();
+        img.onload = () => {
+          tile.texture = img;
+          //   callback(null);
+        };
+        img.onerror = () => callback(new Error("Failed to load SVG tile"));
+        img.crossOrigin = "anonymous";
+        img.src = tileDataUrl;
+
+        return img;
+      }
+
+      // Initialize the SVG tile source
+      const svgTileSource = new SVGTileSource({
+        pattern: "circles",
+        scale: 1,
+        tileSize: 256,
+      });
+
+      // Create the map
+      const map = new maplibregl.Map({
+        container: "map",
+        center: [0, 0],
+        zoom: 2,
+        style: {
+          version: 8,
+          sources: {
+            "svg-tiles": {
+              type: "raster",
+              tiles: [], // Empty transparent tile
+              tileSize: 256,
+            },
+          },
+          layers: [
+            {
+              id: "svg-background",
+              type: "raster",
+              source: "svg-tiles",
+              minzoom: 0,
+              maxzoom: 22,
+            },
+          ],
+        },
+      });
+
+      // Override the tile loading with our custom implementation
+      map.on("load", () => {
+        const source = map.getSource("svg-tiles");
+        // Replace the default tile loading mechanism
+        source.loadTile = function (tile, callback) {
+          console.log("source.loadTile", tile, callback);
+          loadSVGTile(tile, callback, svgTileSource);
+        };
+      });
+
+      // UI Controls
+      window.updatePattern = async function updatePattern() {
+        const pattern = document.getElementById("patternSelect").value;
+        const scale = parseFloat(document.getElementById("scaleSlider").value);
+
+        // Update the pattern and scale in the tile source
+        svgTileSource.updatePattern(pattern, scale);
+
+        // Force map to reload tiles by removing and re-adding the source
+        if (map.getLayer("svg-background")) {
+          map.removeLayer("svg-background");
+        }
+        if (map.getSource("svg-tiles")) {
+          map.removeSource("svg-tiles");
+        }
+
+        const result = await svgTileSource.getTileUrl(1, 1, 1);
+        console.log("result", result);
+
+        map.addSource("svg-tiles", {
+          type: "raster",
+          tiles: [
+            // "data:image/webp;base64,UklGRlgAAABXRUJQVlA4TEsAAAAvB8ABAC+gIG0Dxr/k7tpQkLYB419ydxWkbcD4l9zd+Y//t5EEsE1bUNRIiqxowigYB7DHf4IEJBDR/9h8ft5sgdD158TE5zUEtgAA",
+            result,
+          ],
+          tileSize: 256,
+        });
+
+        map.addLayer({
+          id: "svg-background",
+          type: "raster",
+          source: "svg-tiles",
+          minzoom: 0,
+          maxzoom: 22,
+        });
+
+        // Force a repaint and reload of visible tiles
+        map.triggerRepaint();
+      };
+
+      // Update scale in real-time
+      document
+        .getElementById("scaleSlider")
+        .addEventListener("input", function () {
+          const scale = parseFloat(this.value);
+          const pattern = document.getElementById("patternSelect").value;
+
+          // Update the pattern and scale in the tile source
+          svgTileSource.updatePattern(pattern, scale);
+
+          // Force a repaint and reload of visible tiles
+          map.triggerRepaint();
+        });
+
+      // Add some helpful map controls
+      map.addControl(new maplibregl.NavigationControl());
+      map.addControl(new maplibregl.ScaleControl());
+
+      //   console.log("Map initialized with dynamic SVG tile generation");
+    });
+</script>
