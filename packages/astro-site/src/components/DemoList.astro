@@ -1,0 +1,73 @@
+---
+import { getCollection } from 'astro:content';
+
+// Get all demo entries
+const demos = await getCollection('demos');
+
+// Get all .astro pages dynamically (excluding [id].astro and index.astro)
+const pages = await import.meta.glob('../pages/**/*.astro');
+const staticPages = Object.keys(pages)
+  .filter(path => !path.includes('[') && !path.includes('index'))
+  .map(path => ({
+    name: path.split('/').pop()?.replace('.astro', ''),
+    path: '/' + path.split('/').pop()?.replace('.astro', '').toLowerCase(),
+  }));
+---
+
+<nav>
+  <h2>Demos</h2>
+  <ul>
+    {
+      demos
+        .sort((a, b) =>
+          (a.data.name || a.id).localeCompare(b.data.name || b.id)
+        )
+        .map(demo => (
+          <li>
+            <a href={`/${demo.id}`}>{demo.data.name || demo.id}</a>
+          </li>
+        ))
+    }
+  </ul>
+
+  <h2>Static Pages</h2>
+  <ul>
+    {
+      staticPages.map(page => (
+        <li>
+          <a href={page.path} class="pageLink">
+            {page.name}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<style>
+  nav {
+    margin-bottom: 20px;
+  }
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  li {
+    margin: 10px 0;
+  }
+
+  a {
+    text-decoration: none;
+    color: #007bff;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .pageLink {
+    text-transform: capitalize;
+  }
+</style>

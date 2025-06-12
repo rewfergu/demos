@@ -1,0 +1,8 @@
+body {
+  padding: 2rem;
+  font-family: sans-serif;
+}
+
+#map {
+  height: 600px;
+}

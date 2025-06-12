@@ -1,0 +1,61 @@
+---
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const demoEntries = await getCollection('demos');
+  return demoEntries.map(entry => {
+    return {
+      params: { id: entry.id },
+      props: { entry },
+    };
+  });
+}
+
+// type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #007bff;
+  }
+  nav a:hover {
+    text-decoration: underline;
+  }
+
+  nav svg {
+    position: relative;
+    bottom: 1px;
+  }
+</style>
+
+<nav>
+  <a href="/">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="lucide lucide-chevron-left-icon lucide-chevron-left"
+      ><path d="m15 18-6-6 6-6"></path></svg
+    >
+    <span>Demos</span>
+  </a>
+  <Content />
+</nav>
