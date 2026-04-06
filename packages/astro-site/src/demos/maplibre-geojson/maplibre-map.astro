@@ -1,0 +1,135 @@
+---
+import geojson from './gz_2010_us_040_00_500k.json';
+---
+
+<script defer src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+></script>
+
+<link
+  href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+  rel="stylesheet"
+/>
+
+<div id="map" style="width: 100%; height: 600px;"></div>
+
+<script
+  id="geojson-data"
+  type="application/json"
+  set:html={JSON.stringify(geojson)}
+/>
+
+<script is:inline>
+  document
+    .querySelector('script[src*="maplibre-gl"]')
+    .addEventListener('load', function () {
+      var geojson = JSON.parse(
+        document.getElementById('geojson-data').textContent
+      );
+
+      var map = new maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          sources: {},
+          layers: [
+            {
+              id: 'background',
+              type: 'background',
+              paint: {
+                'background-color': '#e0e0e0',
+              },
+            },
+          ],
+        },
+        center: [-98.5, 39.8],
+        zoom: 3,
+      });
+
+      map.on('load', function () {
+        map.addSource('states', {
+          type: 'geojson',
+          data: geojson,
+        });
+
+        map.addLayer({
+          id: 'states-fill',
+          type: 'fill',
+          source: 'states',
+          paint: {
+            'fill-color': '#627BC1',
+            'fill-opacity': 0.5,
+          },
+        });
+
+        map.addLayer({
+          id: 'states-outline',
+          type: 'line',
+          source: 'states',
+          paint: {
+            'line-color': '#333',
+            'line-width': 1,
+          },
+        });
+
+        var popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        map.on('mousemove', 'states-fill', function (e) {
+          map.getCanvas().style.cursor = 'pointer';
+          var name = e.features[0].properties.NAME;
+          popup
+            .setLngLat(e.lngLat)
+            .setHTML('<strong>' + name + '</strong>')
+            .addTo(map);
+        });
+
+        map.on('mouseleave', 'states-fill', function () {
+          map.getCanvas().style.cursor = '';
+          popup.remove();
+        });
+
+        // Add user's GPS location
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(function (position) {
+            var userLngLat = [position.coords.longitude, position.coords.latitude];
+
+            map.addSource('user-location', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: userLngLat,
+                },
+              },
+            });
+
+            map.addLayer({
+              id: 'user-location-outer',
+              type: 'circle',
+              source: 'user-location',
+              paint: {
+                'circle-radius': 16,
+                'circle-color': '#4285F4',
+                'circle-opacity': 0.25,
+              },
+            });
+
+            map.addLayer({
+              id: 'user-location-inner',
+              type: 'circle',
+              source: 'user-location',
+              paint: {
+                'circle-radius': 7,
+                'circle-color': '#4285F4',
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff',
+              },
+            });
+          });
+        }
+      });
+    });
+</script>

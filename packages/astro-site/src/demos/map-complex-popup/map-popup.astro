@@ -1,0 +1,93 @@
+<script defer src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"
+></script>
+
+<link
+  href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css"
+  rel="stylesheet"
+/>
+
+<div id="map" style="width: 100%; height: 600px;"></div>
+
+<link rel="stylesheet" href="./map-popup.css" />
+
+<script is:inline>
+  document
+    .querySelector('script[src*="maplibre-gl"]')
+    .addEventListener('load', function () {
+      var map = new maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '&copy; OpenStreetMap contributors',
+            },
+          },
+          layers: [
+            {
+              id: 'osm-tiles',
+              type: 'raster',
+              source: 'osm-tiles',
+              minzoom: 0,
+              maxzoom: 19,
+            },
+          ],
+        },
+        center: [-98.5, 39.8],
+        zoom: 4,
+      });
+
+      var currentPopup = null;
+
+      map.on('click', function (e) {
+        if (currentPopup) {
+          currentPopup.remove();
+        }
+
+        var lat = e.lngLat.lat.toFixed(6);
+        var lng = e.lngLat.lng.toFixed(6);
+
+        var html =
+          '<div class="popup-card">' +
+          '<div class="popup-header">' +
+          '<h3>Exploration Point</h3>' +
+          '<p>A notable landmark worth visiting on your next adventure through the region.</p>' +
+          '</div>' +
+          '<div class="popup-body">' +
+          '<div class="coord-row">' +
+          '<div class="coord-item">' +
+          '<span class="label">Latitude</span>' +
+          '<span class="value">' +
+          lat +
+          '</span>' +
+          '</div>' +
+          '<div class="coord-item">' +
+          '<span class="label">Longitude</span>' +
+          '<span class="value">' +
+          lng +
+          '</span>' +
+          '</div>' +
+          '</div>' +
+          '<button class="cta-btn" onclick="alert(\'Coordinates: ' +
+          lat +
+          ', ' +
+          lng +
+          '\')">View Details</button>' +
+          '</div>' +
+          '</div>';
+
+        currentPopup = new maplibregl.Popup({
+          closeButton: true,
+          maxWidth: '300px',
+        })
+          .setLngLat(e.lngLat)
+          .setHTML(html)
+          .addTo(map);
+      });
+
+      map.getCanvas().style.cursor = 'crosshair';
+    });
+</script>

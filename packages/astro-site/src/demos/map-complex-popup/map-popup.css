@@ -1,0 +1,98 @@
+.popup-card {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-width: 240px;
+  padding: 0;
+}
+
+.popup-card .popup-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 8px 8px 0 0;
+  margin: -10px -10px 0;
+}
+
+.popup-card .popup-header h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.popup-card .popup-header p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.popup-card .popup-body {
+  padding: 12px 6px;
+}
+
+.popup-card .popup-body .coord-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.popup-card .popup-body .coord-item {
+  flex: 1;
+  background: #f4f5f7;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.popup-card .popup-body .coord-item span.label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.popup-card .popup-body .coord-item span.value {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.popup-card .popup-body .cta-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.popup-card .popup-body .cta-btn:hover {
+  opacity: 0.9;
+}
+
+.maplibregl-popup-content {
+  padding: 10px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.maplibregl-popup-close-button {
+  font-size: 18px;
+  color: #fff;
+  right: 6px;
+  top: 6px;
+  z-index: 1;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #ddd;
+  background: transparent;
+}

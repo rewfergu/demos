@@ -4,6 +4,22 @@ import '@geoman-io/maplibre-geoman-free/dist/maplibre-geoman.css';
 import ml from 'maplibre-gl';
 import { Geoman } from '@geoman-io/maplibre-geoman-free';
 
+const addPointBtn = document.getElementById('add-point');
+const addLineBtn = document.getElementById('add-line');
+
+let pointsEnabled = false;
+let linesEnabled = false;
+
+addPointBtn.addEventListener('click', () => {
+  console.log('Add point');
+  pointsEnabled = !pointsEnabled;
+});
+
+addLineBtn.addEventListener('click', () => {
+  console.log('Add line');
+  linesEnabled = !linesEnabled;
+});
+
 const mapLibreStyle = {
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -60,4 +76,29 @@ map.on('gm:loaded', () => {
   };
   // geoman instance is also available on the map object
   map.gm?.features.importGeoJsonFeature(shapeGeoJson2);
+});
+
+geoman.setGlobalEventsListener(event => {
+  if (
+    event.type === 'converted' &&
+    event.name === 'gm:create' &&
+    event.payload.shape === 'marker'
+  ) {
+    console.log('Marker event:', event);
+  }
+});
+
+map.on('click', e => {
+  console.log('Map clicked at:', e.lngLat);
+  // you can also use the geoman instance to add a marker
+  // geoman.features.addMarker(e.lngLat);
+
+  if (pointsEnabled) {
+    const marker = new ml.Marker({
+      color: 'red',
+      draggable: true,
+    })
+      .setLngLat(e.lngLat)
+      .addTo(map);
+  }
 });
