@@ -1,0 +1,83 @@
+<!DOCTYPE html><link rel="stylesheet" href="/_astro/GeomanLeaflet.BUzMUuQP.css">
+<link rel="stylesheet" href="/_astro/maplibre-gl.C_8yGwgI.css">
+<link rel="stylesheet" href="/_astro/leaflet.CIGW-MKW.css">
+<style>.action-option.svelte-1892xbw{display:flex;align-items:center;padding:.2rem}.action-option.svelte-1892xbw label:where(.svelte-1892xbw){margin-right:.5rem;white-space:nowrap;cursor:pointer}.action-option.svelte-1892xbw select:where(.svelte-1892xbw),.action-option.svelte-1892xbw input[type=checkbox]:where(.svelte-1892xbw){cursor:pointer}.sub-action.svelte-1x28ief{width:auto;height:auto;border:1px solid #ccc;margin:3px;padding:3px}.control-container.svelte-1rd72r{position:relative}.control-container.svelte-1rd72r .control-menu:where(.svelte-1rd72r){position:absolute;top:0;display:flex;flex-direction:column;background:#fff;box-shadow:4px 0 0 2px #0000001a;clip-path:inset(-2px -2px -2px 0 round 3px)}.control-container.svelte-1rd72r .control-menu.menu-right:where(.svelte-1rd72r){left:100%;border-radius:0 3px 3px 0}.control-container.svelte-1rd72r .control-menu.menu-left:where(.svelte-1rd72r){right:100%;border-radius:3px 0 0 3px}.gm-reactive-controls.svelte-blwgmu{color:brown}.maplibregl-ctrl-group button.gm-control-button{color:#2371a0;padding:6px}.maplibregl-ctrl-group button.gm-control-button:hover,.maplibregl-ctrl-group button.gm-control-button.active{color:#005f7c;background-color:#c4eaff}.maplibregl-ctrl-group button.gm-control-button svg{max-width:100%;max-height:100%}.gm-measurements .maplibregl-popup-tip{display:none}.gm-measurements .maplibregl-popup-content{pointer-events:none}.gm-measurements{font-family:monospace;opacity:85%;min-width:230px}.titled-values .line{display:flex;justify-content:space-between;margin-bottom:.2rem;border-bottom:1px dotted lightgray;line-height:1.2}.titled-values .section-title{text-align:center}.titled-values .line .title{width:50px;margin:0;flex:1 3 auto;white-space:nowrap}.titled-values .line .value{width:50px;margin:0;flex:3 1 auto;white-space:nowrap;text-align:right}.mb-10px{margin-bottom:10px}.feature-toggler{display:flex;align-items:center}.feature-toggler button{cursor:pointer;padding:.3rem;font-size:.9rem;line-height:1.2;border-radius:.25rem;color:#fff;background-color:#007bff;border:1px solid #007bff}.feature-toggler button:hover{background-color:#0056b3;border-color:#0056b3}.marker-wrapper{cursor:pointer}
+body{font-family:sans-serif;margin:0;padding:0}nav[data-astro-cid-p5zaeqd4] a[data-astro-cid-p5zaeqd4]{display:flex;align-items:center;text-decoration:none;color:#007bff}nav[data-astro-cid-p5zaeqd4] a[data-astro-cid-p5zaeqd4]:hover{text-decoration:underline}nav[data-astro-cid-p5zaeqd4] svg[data-astro-cid-p5zaeqd4]{position:relative;bottom:1px}
+</style><style>body{padding:2rem}#map{height:600px}
+</style><nav data-astro-cid-p5zaeqd4> <a href="/" data-astro-cid-p5zaeqd4> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left-icon lucide-chevron-left" data-astro-cid-p5zaeqd4><path d="m15 18-6-6 6-6" data-astro-cid-p5zaeqd4></path></svg> <span data-astro-cid-p5zaeqd4>Demos</span> </a> <h1 id="leaflet-path">Leaflet Path</h1>
+<h2 id="click-anywhere-on-the-map-to-add-a-new-point-to-the-path">Click anywhere on the map to add a new point to the path.</h2>
+<h3 id="move-path-points-by-dragging-them">Move path points by dragging them.</h3>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""><script type="module" src="/_astro/leaflet-path.astro_astro_type_script_index_0_lang.BdpDw26L.js"></script><script defer src="https://unpkg.com/leaflet.path.drag@0.0.6/src/Path.Drag.js"></script><div id="map"></div> <script>
+  const tile =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAACXNJREFUeF7t3TFy40AMBEApukz/f6AzZs4c6f4wCFCo6ctZpEAL01hSe++fn5/vv3//Xum/v7+/l+PVz99PVoHt78/7eZ7v5/PJrv71ev3+/r4cr37pH5C/n93vjwaggWngxQGoAWgAGoAGgLAIm1UA4XcJP60/ARAAARAAAWT5ZxF0mkCO3xUEARAAARAAARBAVgEJvpvg0/oTAAEQAAEQQJZ/1gCmCeT4XUEQAAEQAAEQAAFkFZDguwk+rT8BEAABEAABZPlnDWCaQI7fFQQBEAABNAvAfgD2M7CfQ+9+DgRAAATQLAAbguzOYGZg9d/cUIcACIAACMBTAE8BsgoQzG3BEAABEAABEECWf94DIAACkCDFCaIBaAAagAaQAsq28ssjqDWA5RsgQW8n6PX7pwFoAARXLDgNQAPQADQATwHSIfY6AV1/9whCAARAAARAAASQVYAgbguCAAiAAJoFYD8A+wHYD8B+AJn/Xl6FReDbBG6/f0YAI4ARoHkEsCGIBNvckKI9gbc/PwEQAAEQgMeA6SLIdgd3foKbCI4ACIAACIAACCCrAIHcFggBEAABEAABZPnnPQgCIAAJUpwgGoAGoAFoACmgbAm2PIJaA1i+ARL0doJev38agAZAcMWC0wA0AA1AA/AUIB1irxPQ9XePIG/7AdgPwH4A9gNIA9AqrhHCCHF4hLAG4AvsC3z4Czwd4TQADUAD0AAsAqYz0LQDO757EW77/hMAARAAARAAAWQV2E4w558JigAIgAAIgACy/PNzYAk8S+Dt+hEAARAAARAAAWQV2E4w558JhAAIgAAIgACy/LMGIIFnCbxdPwIgAAIgAAIggKwC2wnm/DOBEAABEECzAOwHYD8A+wHYDyDz38siGILOCKp+u/UzAhgBjADNI8DzPN/J/y6qg+92cPVX/8n3lwAIgAAIwGPAdBFEAkvgSQJv//0QAAEQAAEQAAFkFdhOMOefCYwACIAACIAAsvzzHoQEniXwdv0IgAAIgAAIgACyCmwnmPPPBEIABEAABEAAWf5ZA5DAswTerh8BEAABEAABEEBWge0Ec/6ZQN72A7AfgP0A7AeQtX/7Abwk0CyB1G+3ftYArAFYA7AGYA0gJZAE200w9Z/VnwAIgAAIgAAIIKuABJ4l8Hb9CIAACIAACCDLP28CbieY888EQgAEQAAEQAAEkFVAAs8SeLt+BEAABEAABJDlnzWA7QRz/plACIAACIAACIAAsgpI4FkCb9ePAAiAAAiAALL8swawnWDOPxOI/QD+7AdgPwD7AaQB6PfwRggjxOERwhqAL7Av8OEv8HQE0gA0AA1AA7AImM5A0w7s+NkilvrN6kcABEAABEAABJBVQALPEni7fgRAAARAAASQ5Z8XgbYTzPlnAiEAAiAAAiAAAsgqIIFnCbxdPwIgAAIgAALI8s8awHaCOf9MIARAAARAAARAAFkFJPAsgbfrRwAEQADNAvj5+fn6PXjv78H/7Ifwav77JwACIIBmATzP8/0UF2B7BnP+2zP09ftHAARAAMUBqAFoABqABuAxYPYQzItA1wncfv0EQAAEQAAEQABZBdoT9PrnJwACIAACIIAs/6wBXE/A9usnAAIgAAIgAALIKtCeoNc/PwEQAAEQAAFk+WcN4HoCtl8/ARAAARAAARBAVoH2BL3++d/2A/ir/j24/QC6778RwAhgBDACGAEyAFsEvE7g9usnAAIgAAIgAALIKtCeoNc/PwEQAAEQAAFk+WcN4HoCtl8/ARAAARAAARBAVoH2BL3++QmAAAiAAAggyz9rANcTsP36CYAACIAACIAAsgq0J+j1z08ABEAABEAAWf5ZA7iegO3XTwAEQADNArAfQPfvwe0H0H3/CYAACKBZAM/zfD/FBWifAX3+3+oGSAAEUP0FaG+AGoAGoAEUC1gD0AA0AA3AewDeA8gq0E7o65+fAAiAAAiAALL88ybg9QRsv34CIAACIAACIICsAu0Jev3zEwABEAABEECWf9YAridg+/UTAAEQAAEQAAFkFWhP0OufnwAIgACaBWA/gO7fg9sPoPv+EwABEECzAOwH0P178OszrOuf/f0SAAEQAAF4CpCtgXsPQALPEni7fgRAAARAAARAAFkFthPM+WcCIQACIAACIIAs/6wBSOBZAm/XjwAIgAAIgAAIIKvAdoI5/0wgBEAABEAABJDlnzUACTxL4O36EQABEAABEAABZBXYTjDnnwmEAAiAAJoFYD+A7t+D2w+g+/4TAAEQQLMA7Acwm6HMoOr3OdxACIAACODwF3gaQBqABqABaAAeA2YPwbwINE0gx++OUARAAARAAARAAFkFJPhugk/rTwAEQAAEQABZ/lkDmCaQ43cFQQAEQAAEQAAEkFVAgu8m+LT+BEAABEAABJDlnzWAaQI5flcQBEAABEAABEAAWQUk+G6CT+v/th9A9+/B7QfQff+NAEYAI4ARwAiQAdgi4JSgjt8dIQiAAAiAAAiAALIKSPDdBJ/WnwAIgAAIgACy/LMGME0gx+8KggAIgAAIgAAIIKuABN9N8Gn9CYAACIAACCDLP2sA0wRy/K4gCIAACIAACIAAsgpI8N0En9afAAiAAAiAALL8swYwTSDH7wqCAAiAAJoFYD+A7t+D2w+g+/4TAAEQQLMAnuf5Xv7/zc2QuzOk+t+uPwEQAAEQgKcAngJkFSAAApAgxQmiAWgAGoAGkPHh5T2K7QZqDcAagAZe3MA1AA1AA9AALAKmht0mnPPfnsG37x8BEAABEAABEEBWge0Ec/6ZgAiAAAiAAAggyz+PsSTwLIG360cABEAABEAABJBVYDvBnH8mkLf9ALp/D24/gO77bwQwAhgBjABGgAzAFgERfEbw7foRAAEQAAEQAAFkFdhOMOefCYQACIAACIAAsvyzBiCBZwm8XT8CIAACIAACIICsAtsJ5vwzgRAAARAAARBAln/WACTwLIG360cABEAABEAABJBVYDvBnH8mEAIgAAIgAALI8s8agASeJfB2/QiAAAigWQD2A+j+Pbj9ALrvPwEQAAE0C+B5nu+nuADbM5jz356hr98/AiAAAigOQA1AA9AANACPAT0GzCpwncDt108ABEAABEAAWf55Eag9Qa9/fgIgAAIgAAIggKwC1xOw/foJgAAIgAAIIMs/awDtCXr98xMAARAAARAAAWQVuJ6A7ddPAARAAARAAFn+WQNoT9Drn/8/BL7rMUjTI04AAAAASUVORK5CYII=";
+  document
+    .querySelector('script[src*="leaflet"]')
+    .addEventListener("load", function () {
+      var map = L.map("map").setView([44.967243, -103.771556], 8);
+      // map.dragging.disable();
+      L.tileLayer(tile, {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Create a new polyline for user clicks
+      var userPolyline = L.polyline([], {
+        color: "#3aa0c0",
+        dashArray: "1 2",
+        weight: 1,
+      }).addTo(map);
+
+      // Array to store point markers
+      var pointMarkers = [];
+
+      // Function to create a draggable point
+      function createDraggablePoint(latlng) {
+        var point = L.circleMarker(latlng, {
+          radius: 8,
+          fillColor: "#3aa0c0",
+          color: "#3aa0c0",
+          weight: 1,
+          opacity: 0.8,
+          fillOpacity: 0.8,
+          draggable: true,
+          clickable: true,
+        }).addTo(map);
+
+        // Prevent map dragging when interacting with points
+        point.on("mousedown touchstart", function (e) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
+          map.dragging.disable();
+        });
+
+        point.on("mouseup touchend", function () {
+          map.dragging.enable();
+        });
+
+        // Prevent adding new points when clicking on existing markers
+        point.on("click", function (e) {
+          L.DomEvent.stopPropagation(e);
+          console.log("click on a point");
+        });
+
+        // Update polyline when point is dragged
+        point.on("dragend", function (e) {
+          var index = pointMarkers.indexOf(point);
+          if (index !== -1) {
+            var latlngs = userPolyline.getLatLngs();
+            latlngs[index] = e.target.getLatLng();
+            userPolyline.setLatLngs(latlngs);
+          }
+        });
+
+        return point;
+      }
+
+      // Add click handler to add points
+      map.on("click", function (e) {
+        userPolyline.addLatLng(e.latlng);
+        var newPoint = createDraggablePoint(e.latlng);
+        pointMarkers.push(newPoint);
+        console.log("click on a map");
+      });
+    });
+</script> </nav>

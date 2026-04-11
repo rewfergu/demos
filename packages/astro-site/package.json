@@ -10,10 +10,10 @@
   "dependencies": {
     "@astrojs/mdx": "^4.3.0",
     "@astrojs/react": "^4.3.0",
-    "@demo-archive/demos/leaflet": "workspace:*",
+    "@demo-archive/demo-leaflet": "workspace:*",
     "@demo-archive/island-counter": "workspace:*",
-    "@demo-archive/demos/maplibre": "workspace:*",
-    "@demo-archive/demos/p5": "workspace:*",
+    "@demo-archive/demo-maplibre": "workspace:*",
+    "@demo-archive/demo-p5": "workspace:*",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
     "astro": "^5.9.0",

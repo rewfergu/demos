@@ -1,5 +1,5 @@
 {
-    "name": "@demo-archive/demos/leaflet",
+    "name": "@demo-archive/demo-leaflet",
     "version": "1.0.0",
     "type": "module",
     "main": "index.js",

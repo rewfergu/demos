@@ -1,0 +1,281 @@
+<!DOCTYPE html><style>.action-option.svelte-1892xbw{display:flex;align-items:center;padding:.2rem}.action-option.svelte-1892xbw label:where(.svelte-1892xbw){margin-right:.5rem;white-space:nowrap;cursor:pointer}.action-option.svelte-1892xbw select:where(.svelte-1892xbw),.action-option.svelte-1892xbw input[type=checkbox]:where(.svelte-1892xbw){cursor:pointer}.sub-action.svelte-1x28ief{width:auto;height:auto;border:1px solid #ccc;margin:3px;padding:3px}.control-container.svelte-1rd72r{position:relative}.control-container.svelte-1rd72r .control-menu:where(.svelte-1rd72r){position:absolute;top:0;display:flex;flex-direction:column;background:#fff;box-shadow:4px 0 0 2px #0000001a;clip-path:inset(-2px -2px -2px 0 round 3px)}.control-container.svelte-1rd72r .control-menu.menu-right:where(.svelte-1rd72r){left:100%;border-radius:0 3px 3px 0}.control-container.svelte-1rd72r .control-menu.menu-left:where(.svelte-1rd72r){right:100%;border-radius:3px 0 0 3px}.gm-reactive-controls.svelte-blwgmu{color:brown}.maplibregl-ctrl-group button.gm-control-button{color:#2371a0;padding:6px}.maplibregl-ctrl-group button.gm-control-button:hover,.maplibregl-ctrl-group button.gm-control-button.active{color:#005f7c;background-color:#c4eaff}.maplibregl-ctrl-group button.gm-control-button svg{max-width:100%;max-height:100%}.gm-measurements .maplibregl-popup-tip{display:none}.gm-measurements .maplibregl-popup-content{pointer-events:none}.gm-measurements{font-family:monospace;opacity:85%;min-width:230px}.titled-values .line{display:flex;justify-content:space-between;margin-bottom:.2rem;border-bottom:1px dotted lightgray;line-height:1.2}.titled-values .section-title{text-align:center}.titled-values .line .title{width:50px;margin:0;flex:1 3 auto;white-space:nowrap}.titled-values .line .value{width:50px;margin:0;flex:3 1 auto;white-space:nowrap;text-align:right}.mb-10px{margin-bottom:10px}.feature-toggler{display:flex;align-items:center}.feature-toggler button{cursor:pointer;padding:.3rem;font-size:.9rem;line-height:1.2;border-radius:.25rem;color:#fff;background-color:#007bff;border:1px solid #007bff}.feature-toggler button:hover{background-color:#0056b3;border-color:#0056b3}.marker-wrapper{cursor:pointer}
+</style>
+<link rel="stylesheet" href="/_astro/leaflet.CIGW-MKW.css">
+<link rel="stylesheet" href="/_astro/maplibre-gl.C_8yGwgI.css">
+<link rel="stylesheet" href="/_astro/GeomanLeaflet.BUzMUuQP.css">
+<style>body{font-family:sans-serif;margin:0;padding:0}nav[data-astro-cid-p5zaeqd4] a[data-astro-cid-p5zaeqd4]{display:flex;align-items:center;text-decoration:none;color:#007bff}nav[data-astro-cid-p5zaeqd4] a[data-astro-cid-p5zaeqd4]:hover{text-decoration:underline}nav[data-astro-cid-p5zaeqd4] svg[data-astro-cid-p5zaeqd4]{position:relative;bottom:1px}
+</style><style>body{margin:0;padding:0}#map[data-astro-cid-knmbrabn]{position:absolute;top:0;bottom:0;width:100%}#controls[data-astro-cid-knmbrabn]{position:absolute;top:120px;right:10px;background:#fff;padding:10px;border-radius:5px;box-shadow:0 2px 4px #0003;z-index:1000}select[data-astro-cid-knmbrabn],button[data-astro-cid-knmbrabn]{margin:5px;padding:5px}
+</style><nav data-astro-cid-p5zaeqd4> <a href="/" data-astro-cid-p5zaeqd4> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left-icon lucide-chevron-left" data-astro-cid-p5zaeqd4><path d="m15 18-6-6 6-6" data-astro-cid-p5zaeqd4></path></svg> <span data-astro-cid-p5zaeqd4>Demos</span> </a> <h1 id="custom-map-pattern-with-maplibre">Custom Map Pattern with MapLibre</h1>
+<script defer src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script> <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet"><div id="controls" data-astro-cid-knmbrabn> <select id="patternSelect" data-astro-cid-knmbrabn> <option value="circles" data-astro-cid-knmbrabn>Circles</option> <option value="grid" data-astro-cid-knmbrabn>Grid</option> <option value="hexagons" data-astro-cid-knmbrabn>Hexagons</option> <option value="waves" data-astro-cid-knmbrabn>Waves</option> </select> <button onclick="window.updatePattern()" data-astro-cid-knmbrabn>Update Pattern</button> <br data-astro-cid-knmbrabn> <label data-astro-cid-knmbrabn>Scale: <input type="range" id="scaleSlider" min="0.5" max="3" step="0.1" value="1" data-astro-cid-knmbrabn></label> </div> <div id="map" data-astro-cid-knmbrabn></div> <script>
+  window.updatePattern = () => false;
+  document
+    .querySelector('script[src*="maplibre-gl"]')
+    .addEventListener("load", function () {
+      class SVGTileSource {
+        constructor(options = {}) {
+          this.tileSize = options.tileSize || 256;
+          this.tileCache = new Map();
+          this.pattern = options.pattern || "circles";
+          this.scale = options.scale || 1;
+          this.maxCacheSize = options.maxCacheSize || 1000;
+        }
+
+        // Main method to get tile data
+        async getTileUrl(z, x, y) {
+          const tileKey = `${z}-${x}-${y}-${this.pattern}-${this.scale}`;
+
+          if (this.tileCache.has(tileKey)) {
+            return this.tileCache.get(tileKey);
+          }
+
+          const tileDataUrl = await this.generateTileFromSVG(z, x, y);
+          //   console.log("tileDataUrl", tileDataUrl);
+
+          // Simple LRU cache management
+          if (this.tileCache.size > this.maxCacheSize) {
+            const firstKey = this.tileCache.keys().next().value;
+            this.tileCache.delete(firstKey);
+          }
+
+          this.tileCache.set(tileKey, tileDataUrl);
+          return tileDataUrl;
+        }
+
+        // Generate SVG pattern based on tile coordinates and zoom level
+        generateTileFromSVG(z, x, y) {
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = this.tileSize;
+          const ctx = canvas.getContext("2d");
+
+          // Calculate pattern parameters based on zoom level
+          const zoomScale = Math.pow(2, z - 10); // Adjust base zoom level as needed
+          const patternSize =
+            32 * this.scale * Math.max(0.5, Math.min(2, zoomScale));
+
+          // Create SVG string based on pattern type
+          const svgString = this.createSVGPattern(patternSize, x, y, z);
+          //   console.log("svgString", svgString);
+
+          // Convert SVG to canvas
+          const img = new Image();
+          const svgBlob = new Blob([svgString], {
+            type: "image/svg+xml;charset=utf-8",
+          });
+          const url = URL.createObjectURL(svgBlob);
+
+          // Return a promise that resolves to data URL
+          return new Promise((resolve) => {
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, this.tileSize, this.tileSize);
+              URL.revokeObjectURL(url);
+              resolve(canvas.toDataURL());
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              // Return a simple colored tile as fallback
+              ctx.fillStyle = "#f0f0f0";
+              ctx.fillRect(0, 0, this.tileSize, this.tileSize);
+              resolve(canvas.toDataURL());
+            };
+            img.src = url;
+          });
+        }
+
+        // Create different SVG patterns
+        createSVGPattern(patternSize, tileX, tileY, zoom) {
+          const size = this.tileSize;
+          let patternDef = "";
+          let patternUse = "";
+
+          // Add tile-specific offset for seamless tiling
+          const offsetX = (tileX * size) % patternSize;
+          const offsetY = (tileY * size) % patternSize;
+
+          switch (this.pattern) {
+            case "circles":
+              patternDef = `
+                            <pattern id="circlePattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize}" fill="#e8f4f8"/>
+                                <circle cx="${patternSize / 2}" cy="${patternSize / 2}" r="${patternSize / 8}" fill="#4a90e2" opacity="0.6"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#circlePattern)"/>`;
+              break;
+
+            case "grid":
+              patternDef = `
+                            <pattern id="gridPattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize}" fill="#f9f9f9"/>
+                                <path d="M ${patternSize} 0 L 0 0 0 ${patternSize}" fill="none" stroke="#ddd" stroke-width="1"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#gridPattern)"/>`;
+              break;
+
+            case "hexagons":
+              const hexSize = patternSize / 3;
+              const hexHeight = hexSize * Math.sqrt(3);
+              patternDef = `
+                            <pattern id="hexPattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${hexHeight}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${hexHeight}" fill="#f0f8ff"/>
+                                <polygon points="${hexSize / 2},0 ${hexSize * 1.5},0 ${hexSize * 2},${hexHeight / 2} ${hexSize * 1.5},${hexHeight} ${hexSize / 2},${hexHeight} 0,${hexHeight / 2}" 
+                                         fill="none" stroke="#6b73ff" stroke-width="1"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#hexPattern)"/>`;
+              break;
+
+            case "waves":
+              patternDef = `
+                            <pattern id="wavePattern" x="${-offsetX}" y="${-offsetY}" width="${patternSize}" height="${patternSize / 2}" patternUnits="userSpaceOnUse">
+                                <rect width="${patternSize}" height="${patternSize / 2}" fill="#fff5f5"/>
+                                <path d="M0,${patternSize / 4} Q${patternSize / 4},0 ${patternSize / 2},${patternSize / 4} T${patternSize},${patternSize / 4}" 
+                                      fill="none" stroke="#ff6b9d" stroke-width="2"/>
+                            </pattern>
+                        `;
+              patternUse = `<rect width="100%" height="100%" fill="url(#wavePattern)"/>`;
+              break;
+          }
+
+          return `
+                    <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            ${patternDef}
+                        </defs>
+                        ${patternUse}
+                    </svg>
+                `;
+        }
+
+        // Update pattern and clear cache
+        updatePattern(pattern, scale) {
+          this.pattern = pattern;
+          this.scale = scale;
+          this.tileCache.clear();
+        }
+      }
+
+      // Custom tile loading implementation
+      async function loadSVGTile(tile, callback, svgTileSource) {
+        const { z, x, y } = tile.tileID.canonical;
+
+        const tileDataUrl = await svgTileSource.getTileUrl(z, x, y);
+
+        console.log("tileDataUrl", tileDataUrl);
+
+        const img = new Image();
+        img.onload = () => {
+          tile.texture = img;
+          //   callback(null);
+        };
+        img.onerror = () => callback(new Error("Failed to load SVG tile"));
+        img.crossOrigin = "anonymous";
+        img.src = tileDataUrl;
+
+        return img;
+      }
+
+      // Initialize the SVG tile source
+      const svgTileSource = new SVGTileSource({
+        pattern: "circles",
+        scale: 1,
+        tileSize: 256,
+      });
+
+      // Create the map
+      const map = new maplibregl.Map({
+        container: "map",
+        center: [0, 0],
+        zoom: 2,
+        style: {
+          version: 8,
+          sources: {
+            "svg-tiles": {
+              type: "raster",
+              tiles: [], // Empty transparent tile
+              tileSize: 256,
+            },
+          },
+          layers: [
+            {
+              id: "svg-background",
+              type: "raster",
+              source: "svg-tiles",
+              minzoom: 0,
+              maxzoom: 22,
+            },
+          ],
+        },
+      });
+
+      // Override the tile loading with our custom implementation
+      map.on("load", () => {
+        const source = map.getSource("svg-tiles");
+        // Replace the default tile loading mechanism
+        source.loadTile = function (tile, callback) {
+          console.log("source.loadTile", tile, callback);
+          loadSVGTile(tile, callback, svgTileSource);
+        };
+      });
+
+      // UI Controls
+      window.updatePattern = async function updatePattern() {
+        const pattern = document.getElementById("patternSelect").value;
+        const scale = parseFloat(document.getElementById("scaleSlider").value);
+
+        // Update the pattern and scale in the tile source
+        svgTileSource.updatePattern(pattern, scale);
+
+        // Force map to reload tiles by removing and re-adding the source
+        if (map.getLayer("svg-background")) {
+          map.removeLayer("svg-background");
+        }
+        if (map.getSource("svg-tiles")) {
+          map.removeSource("svg-tiles");
+        }
+
+        const result = await svgTileSource.getTileUrl(1, 1, 1);
+        console.log("result", result);
+
+        map.addSource("svg-tiles", {
+          type: "raster",
+          tiles: [
+            // "data:image/webp;base64,UklGRlgAAABXRUJQVlA4TEsAAAAvB8ABAC+gIG0Dxr/k7tpQkLYB419ydxWkbcD4l9zd+Y//t5EEsE1bUNRIiqxowigYB7DHf4IEJBDR/9h8ft5sgdD158TE5zUEtgAA",
+            result,
+          ],
+          tileSize: 256,
+        });
+
+        map.addLayer({
+          id: "svg-background",
+          type: "raster",
+          source: "svg-tiles",
+          minzoom: 0,
+          maxzoom: 22,
+        });
+
+        // Force a repaint and reload of visible tiles
+        map.triggerRepaint();
+      };
+
+      // Update scale in real-time
+      document
+        .getElementById("scaleSlider")
+        .addEventListener("input", function () {
+          const scale = parseFloat(this.value);
+          const pattern = document.getElementById("patternSelect").value;
+
+          // Update the pattern and scale in the tile source
+          svgTileSource.updatePattern(pattern, scale);
+
+          // Force a repaint and reload of visible tiles
+          map.triggerRepaint();
+        });
+
+      // Add some helpful map controls
+      map.addControl(new maplibregl.NavigationControl());
+      map.addControl(new maplibregl.ScaleControl());
+
+      //   console.log("Map initialized with dynamic SVG tile generation");
+    });
+</script> </nav>

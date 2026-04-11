@@ -1,5 +1,5 @@
 {
-    "name": "@demo-archive/demos/maplibre",
+    "name": "@demo-archive/demo-maplibre",
     "version": "1.0.0",
     "main": "index.js",
     "type": "module",

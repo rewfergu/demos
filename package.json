@@ -1,13 +1,14 @@
 {
   "name": "demo-monorepo",
   "private": true,
+  "workspaces": ["packages/*", "packages/demos/*"],
   "scripts": {
-    "dev": "pnpm --filter astro-site dev",
-    "build": "pnpm run build:islands && pnpm --filter astro-site build",
-    "build:islands": "pnpm --filter './packages/demos/*' build",
-    "dev:all": "pnpm --parallel --filter './packages/island-*' dev & pnpm --filter astro-site dev",
-    "clean": "pnpm --recursive exec rm -rf dist node_modules",
-    "install:all": "pnpm install"
+    "dev": "bun run --filter @demo-archive/astro-site dev",
+    "build": "bun run build:islands && bun run --filter @demo-archive/astro-site build",
+    "build:islands": "bun run --filter './packages/demos/*' build",
+    "dev:all": "bun run --filter './packages/island-*' dev & bun run --filter @demo-archive/astro-site dev",
+    "clean": "find packages -maxdepth 3 \\( -name dist -o -name node_modules \\) -exec rm -rf {} + && rm -rf node_modules",
+    "install:all": "bun install"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
@@ -15,6 +16,5 @@
     "@types/react": "^18.2.0",
     "eslint": "^8.45.0",
     "prettier": "^3.0.0"
-  },
-  "packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
+  }
 }
