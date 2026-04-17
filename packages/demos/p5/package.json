@@ -6,6 +6,10 @@
     "exports": {
         ".": "./index.js"
     },
+    "scripts": {
+        "dev": "bun build ./index.js --outdir=dist --target=browser --packages=external --watch",
+        "build": "bun build ./index.js --outdir=dist --target=browser --packages=external"
+    },
     "dependencies": {
         "p5": "1.4.0"
     },
