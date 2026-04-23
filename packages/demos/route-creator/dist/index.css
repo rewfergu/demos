@@ -474,10 +474,14 @@
 }
 
 .rc-waypoint-marker {
+  cursor: pointer;
+  will-change: transform;
+}
+
+.rc-waypoint-marker-inner {
   display: flex;
   color: #fff;
   box-shadow: 0 2px 6px #0000004d;
-  cursor: pointer;
   font-variant-numeric: tabular-nums;
   background: #e74c3c;
   border: 2px solid #fff;
@@ -492,8 +496,11 @@
 }
 
 .rc-waypoint-marker-active {
-  box-shadow: 0 0 0 4px #2563eb40, 0 4px 10px #00000059;
   z-index: 2;
+}
+
+.rc-waypoint-marker-active .rc-waypoint-marker-inner {
+  box-shadow: 0 0 0 4px #2563eb40, 0 4px 10px #00000059;
   background: #2563eb;
   transform: scale(1.25);
 }

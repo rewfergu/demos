@@ -488,6 +488,11 @@
 
 /* Numbered waypoint marker on the map */
 .rc-waypoint-marker {
+  cursor: pointer;
+  will-change: transform;
+}
+
+.rc-waypoint-marker-inner {
   width: 32px;
   height: 32px;
   display: flex;
@@ -500,16 +505,18 @@
   font-weight: 700;
   font-size: 0.875rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
   font-variant-numeric: tabular-nums;
   transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .rc-waypoint-marker-active {
+  z-index: 2;
+}
+
+.rc-waypoint-marker-active .rc-waypoint-marker-inner {
   background: #2563eb;
   transform: scale(1.25);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25), 0 4px 10px rgba(0, 0, 0, 0.35);
-  z-index: 2;
 }
 
 /* Marker popup */

@@ -121,7 +121,10 @@ function createRouteRenderer(map) {
       el.className = "rc-waypoint-marker";
       if (i === activeIndex)
         el.classList.add("rc-waypoint-marker-active");
-      el.textContent = String(i + 1);
+      const inner = document.createElement("div");
+      inner.className = "rc-waypoint-marker-inner";
+      inner.textContent = String(i + 1);
+      el.appendChild(inner);
       const content = document.createElement("div");
       content.className = "marker-popup";
       const img = document.createElement("img");
