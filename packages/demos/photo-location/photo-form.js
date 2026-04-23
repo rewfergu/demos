@@ -1,7 +1,13 @@
 import { extractGps } from './exif.js';
 import { saveEntry, getAllEntries } from './store.js';
-import { initMap, addMarker, loadMarkers } from './map-view.js';
+import { initMap, addMarker, loadMarkers, createPreviewMarker } from './map-view.js';
 import './style.css';
+
+const PIN_SVG = `
+  <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" aria-hidden="true">
+    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+  </svg>
+`;
 
 function resizeImage(file, maxDim = 800) {
   return new Promise((resolve) => {
@@ -51,6 +57,16 @@ function buildForm(container) {
               <input type="number" id="pl-lng" step="any" min="-180" max="180" required placeholder="e.g. -74.0060" />
             </div>
           </div>
+          <div class="pl-marker-drag-wrap">
+            <button
+              type="button"
+              id="pl-marker-drag"
+              class="pl-marker-drag"
+              aria-label="Drag onto the map to set the location"
+              title="Drag onto the map to set the location"
+            >${PIN_SVG}</button>
+            <span class="pl-marker-drag-hint">Drag this pin onto the map to set the location.</span>
+          </div>
           <div class="pl-gps-status" id="pl-gps-status" hidden></div>
           <div class="pl-field">
             <label for="pl-name">Location Name</label>
@@ -70,6 +86,56 @@ function buildForm(container) {
   `;
 }
 
+function setupMarkerDrag(handle, mapContainer, onDropOnMap) {
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture?.(e.pointerId);
+
+    const ghost = document.createElement('div');
+    ghost.className = 'pl-marker-drag-ghost';
+    ghost.innerHTML = PIN_SVG;
+    document.body.appendChild(ghost);
+    const positionGhost = (clientX, clientY) => {
+      ghost.style.left = `${clientX}px`;
+      ghost.style.top = `${clientY}px`;
+    };
+    positionGhost(e.clientX, e.clientY);
+
+    const isOverMap = (clientX, clientY) => {
+      const rect = mapContainer.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+    };
+
+    const onMove = (ev) => {
+      positionGhost(ev.clientX, ev.clientY);
+      mapContainer.classList.toggle('pl-map-drop-target', isOverMap(ev.clientX, ev.clientY));
+    };
+
+    const onUp = (ev) => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      ghost.remove();
+      mapContainer.classList.remove('pl-map-drop-target');
+
+      if (ev.type === 'pointerup' && isOverMap(ev.clientX, ev.clientY)) {
+        const rect = mapContainer.getBoundingClientRect();
+        onDropOnMap(ev.clientX - rect.left, ev.clientY - rect.top);
+      }
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  });
+}
+
 export async function init(containerId = 'photo-location') {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -85,8 +151,35 @@ export async function init(containerId = 'photo-location') {
   const latInput = document.getElementById('pl-lat');
   const lngInput = document.getElementById('pl-lng');
   const gpsStatus = document.getElementById('pl-gps-status');
+  const mapContainer = document.getElementById('pl-map');
+  const dragHandle = document.getElementById('pl-marker-drag');
 
   let currentDataUrl = null;
+  let photoHadGps = false;
+
+  const setStatus = (message, kind) => {
+    gpsStatus.hidden = false;
+    gpsStatus.textContent = message;
+    gpsStatus.className = `pl-gps-status pl-gps-${kind}`;
+  };
+
+  const previewMarker = createPreviewMarker(map, (lng, lat) => {
+    latInput.value = lat.toFixed(6);
+    lngInput.value = lng.toFixed(6);
+  });
+
+  const syncPreviewMarker = () => {
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      previewMarker.set(lng, lat);
+    } else {
+      previewMarker.clear();
+    }
+  };
+
+  latInput.addEventListener('input', syncPreviewMarker);
+  lngInput.addEventListener('input', syncPreviewMarker);
 
   photoInput.addEventListener('change', async () => {
     const file = photoInput.files[0];
@@ -96,18 +189,33 @@ export async function init(containerId = 'photo-location') {
     previewImg.src = currentDataUrl;
     preview.hidden = false;
 
-    gpsStatus.hidden = false;
-    gpsStatus.textContent = 'Reading EXIF data...';
+    setStatus('Reading EXIF data...', 'missing');
 
     const gps = await extractGps(file);
     if (gps) {
       latInput.value = gps.lat.toFixed(6);
       lngInput.value = gps.lng.toFixed(6);
-      gpsStatus.textContent = 'GPS coordinates extracted from photo.';
-      gpsStatus.className = 'pl-gps-status pl-gps-found';
+      photoHadGps = true;
+      setStatus('GPS coordinates extracted from photo. Drop the pin on the map to override.', 'found');
+      syncPreviewMarker();
+      map.flyTo({ center: [gps.lng, gps.lat], zoom: 14 });
     } else {
-      gpsStatus.textContent = 'No GPS data found. Enter coordinates manually.';
-      gpsStatus.className = 'pl-gps-status pl-gps-missing';
+      photoHadGps = false;
+      setStatus('No GPS data found. Drag the pin onto the map or enter coordinates manually.', 'missing');
+    }
+  });
+
+  setupMarkerDrag(dragHandle, mapContainer, (x, y) => {
+    const { lng, lat } = map.unproject([x, y]);
+    const overwritingPhotoGps = photoHadGps;
+    latInput.value = lat.toFixed(6);
+    lngInput.value = lng.toFixed(6);
+    previewMarker.set(lng, lat);
+    photoHadGps = false;
+    if (overwritingPhotoGps) {
+      setStatus('Photo GPS overwritten with marker location.', 'found');
+    } else {
+      setStatus('Location set from map. Drag the marker to fine-tune.', 'found');
     }
   });
 
@@ -131,7 +239,9 @@ export async function init(containerId = 'photo-location') {
     form.reset();
     preview.hidden = true;
     gpsStatus.hidden = true;
+    previewMarker.clear();
     currentDataUrl = null;
+    photoHadGps = false;
   });
 
   // Load existing entries

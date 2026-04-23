@@ -53,6 +53,30 @@ export function addMarker(map, entry) {
     .addTo(map);
 }
 
+export function createPreviewMarker(map, onDragEnd) {
+  const marker = new maplibregl.Marker({ color: '#3b82f6', draggable: true });
+  marker.on('dragend', () => {
+    const { lng, lat } = marker.getLngLat();
+    onDragEnd(lng, lat);
+  });
+  let attached = false;
+  return {
+    set(lng, lat) {
+      marker.setLngLat([lng, lat]);
+      if (!attached) {
+        marker.addTo(map);
+        attached = true;
+      }
+    },
+    clear() {
+      if (attached) {
+        marker.remove();
+        attached = false;
+      }
+    },
+  };
+}
+
 export function loadMarkers(map, entries) {
   if (entries.length === 0) return;
 
