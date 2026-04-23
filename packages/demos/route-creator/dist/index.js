@@ -100,7 +100,7 @@ function initRoute(map) {
 }
 function createRouteRenderer(map) {
   let markers = [];
-  const render = (waypoints) => {
+  const render = (waypoints, activeIndex = -1) => {
     markers.forEach((m) => m.remove());
     markers = [];
     const source = map.getSource(ROUTE_SOURCE_ID);
@@ -119,6 +119,8 @@ function createRouteRenderer(map) {
     waypoints.forEach((w, i) => {
       const el = document.createElement("div");
       el.className = "rc-waypoint-marker";
+      if (i === activeIndex)
+        el.classList.add("rc-waypoint-marker-active");
       el.textContent = String(i + 1);
       const content = document.createElement("div");
       content.className = "marker-popup";
@@ -145,7 +147,12 @@ function createRouteRenderer(map) {
       map.flyTo({ center: [waypoints[0].lng, waypoints[0].lat], zoom: 13 });
     }
   };
-  return { render };
+  const setActive = (activeIndex) => {
+    markers.forEach((m, i) => {
+      m.getElement().classList.toggle("rc-waypoint-marker-active", i === activeIndex);
+    });
+  };
+  return { render, setActive };
 }
 
 // photo-form.js
@@ -183,6 +190,27 @@ function buildForm(container) {
   container.innerHTML = `
     <div class="rc-layout">
       <div class="rc-sidebar">
+        <div class="rc-mode-toggle" role="tablist" aria-label="Mode">
+          <button type="button" class="rc-mode-btn rc-mode-active" id="rc-mode-edit" role="tab" aria-selected="true">Edit</button>
+          <button type="button" class="rc-mode-btn" id="rc-mode-view" role="tab" aria-selected="false">View</button>
+        </div>
+        <section class="rc-view" id="rc-view" hidden>
+          <p class="rc-view-empty" id="rc-view-empty">No waypoints yet. Switch to Edit to add some.</p>
+          <article class="rc-view-card" id="rc-view-card" hidden>
+            <header class="rc-view-head">
+              <span class="rc-view-index" id="rc-view-index">1</span>
+              <span class="rc-view-position" id="rc-view-position">1 of 1</span>
+            </header>
+            <img class="rc-view-photo" id="rc-view-photo" alt="" />
+            <h2 class="rc-view-name" id="rc-view-name"></h2>
+            <p class="rc-view-desc" id="rc-view-desc" hidden></p>
+            <div class="rc-view-coords" id="rc-view-coords"></div>
+          </article>
+          <div class="rc-view-nav" id="rc-view-nav" hidden>
+            <button type="button" class="rc-view-btn" id="rc-view-prev">Previous</button>
+            <button type="button" class="rc-view-btn" id="rc-view-next">Next</button>
+          </div>
+        </section>
         <form class="rc-form" id="rc-form">
           <div class="rc-field">
             <label for="rc-photo">Photo</label>
@@ -300,10 +328,26 @@ async function init(containerId = "route-creator") {
   const countEl = document.getElementById("rc-count");
   const emptyEl = document.getElementById("rc-empty");
   const clearBtn = document.getElementById("rc-clear");
+  const modeEditBtn = document.getElementById("rc-mode-edit");
+  const modeViewBtn = document.getElementById("rc-mode-view");
+  const viewPanel = document.getElementById("rc-view");
+  const viewCard = document.getElementById("rc-view-card");
+  const viewEmpty = document.getElementById("rc-view-empty");
+  const viewNav = document.getElementById("rc-view-nav");
+  const viewIndexEl = document.getElementById("rc-view-index");
+  const viewPositionEl = document.getElementById("rc-view-position");
+  const viewPhotoEl = document.getElementById("rc-view-photo");
+  const viewNameEl = document.getElementById("rc-view-name");
+  const viewDescEl = document.getElementById("rc-view-desc");
+  const viewCoordsEl = document.getElementById("rc-view-coords");
+  const viewPrevBtn = document.getElementById("rc-view-prev");
+  const viewNextBtn = document.getElementById("rc-view-next");
   let currentDataUrl = null;
   let photoHadGps = false;
   const waypoints = [];
   let nextId = 1;
+  let mode = "edit";
+  let viewIndex = 0;
   const setStatus = (message, kind) => {
     gpsStatus.hidden = false;
     gpsStatus.textContent = message;
@@ -385,6 +429,10 @@ async function init(containerId = "route-creator") {
       flyBtn.setAttribute("aria-label", `Fly to waypoint ${i + 1}`);
       flyBtn.textContent = "Show";
       flyBtn.addEventListener("click", () => {
+        if (mode === "view") {
+          viewIndex = i;
+          renderView();
+        }
         map.flyTo({ center: [w.lng, w.lat], zoom: 14 });
       });
       const removeBtn = document.createElement("button");
@@ -407,10 +455,77 @@ async function init(containerId = "route-creator") {
     emptyEl.hidden = count > 0;
     clearBtn.hidden = count === 0;
   }
+  function renderView() {
+    const count = waypoints.length;
+    viewEmpty.hidden = count > 0;
+    viewCard.hidden = count === 0;
+    viewNav.hidden = count === 0;
+    if (count === 0) {
+      route.setActive(-1);
+      return;
+    }
+    if (viewIndex < 0)
+      viewIndex = 0;
+    if (viewIndex >= count)
+      viewIndex = count - 1;
+    const w = waypoints[viewIndex];
+    viewIndexEl.textContent = String(viewIndex + 1);
+    viewPositionEl.textContent = `${viewIndex + 1} of ${count}`;
+    viewPhotoEl.src = w.photoDataUrl;
+    viewPhotoEl.alt = w.name;
+    viewNameEl.textContent = w.name;
+    viewDescEl.textContent = w.description;
+    viewDescEl.hidden = !w.description;
+    viewCoordsEl.textContent = `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`;
+    viewPrevBtn.disabled = viewIndex === 0;
+    viewNextBtn.disabled = viewIndex === count - 1;
+    route.setActive(viewIndex);
+  }
+  function setMode(next) {
+    mode = next;
+    const isEdit = mode === "edit";
+    modeEditBtn.classList.toggle("rc-mode-active", isEdit);
+    modeViewBtn.classList.toggle("rc-mode-active", !isEdit);
+    modeEditBtn.setAttribute("aria-selected", String(isEdit));
+    modeViewBtn.setAttribute("aria-selected", String(!isEdit));
+    form.hidden = !isEdit;
+    viewPanel.hidden = isEdit;
+    if (isEdit) {
+      route.setActive(-1);
+    } else {
+      renderView();
+      const w = waypoints[viewIndex];
+      if (w)
+        map.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+    }
+  }
   function refresh() {
     renderList();
-    route.render(waypoints);
+    const activeIdx = mode === "view" && waypoints.length > 0 ? Math.min(Math.max(viewIndex, 0), waypoints.length - 1) : -1;
+    route.render(waypoints, activeIdx);
+    if (mode === "view")
+      renderView();
   }
+  modeEditBtn.addEventListener("click", () => setMode("edit"));
+  modeViewBtn.addEventListener("click", () => setMode("view"));
+  viewPrevBtn.addEventListener("click", () => {
+    if (viewIndex > 0) {
+      viewIndex -= 1;
+      renderView();
+      const w = waypoints[viewIndex];
+      if (w)
+        map.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+    }
+  });
+  viewNextBtn.addEventListener("click", () => {
+    if (viewIndex < waypoints.length - 1) {
+      viewIndex += 1;
+      renderView();
+      const w = waypoints[viewIndex];
+      if (w)
+        map.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+    }
+  });
   clearBtn.addEventListener("click", () => {
     waypoints.length = 0;
     refresh();

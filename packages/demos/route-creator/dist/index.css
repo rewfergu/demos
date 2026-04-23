@@ -15,6 +15,150 @@
   width: 100%;
 }
 
+.rc-mode-toggle {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: .5rem;
+  gap: .25rem;
+  padding: .25rem;
+}
+
+.rc-mode-btn {
+  color: #4b5563;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: .375rem;
+  flex: 1;
+  padding: .5rem .75rem;
+  transition: background .15s, color .15s;
+  font-size: .9375rem;
+  font-weight: 600;
+}
+
+.rc-mode-btn:hover:not(.rc-mode-active) {
+  background: #e5e7eb;
+}
+
+.rc-mode-btn.rc-mode-active {
+  color: #111827;
+  box-shadow: 0 1px 2px #0000000d;
+  background: #fff;
+}
+
+.rc-view {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.rc-form[hidden], .rc-view[hidden] {
+  display: none;
+}
+
+.rc-view-empty {
+  text-align: center;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: .5rem;
+  margin: 0;
+  padding: 1.5rem .75rem;
+  font-size: .875rem;
+}
+
+.rc-view-card {
+  display: flex;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: .5rem;
+  flex-direction: column;
+  gap: .5rem;
+  padding: .875rem;
+}
+
+.rc-view-head {
+  display: flex;
+  justify-content: space-between;
+  align-items:  center;
+}
+
+.rc-view-index {
+  display: inline-flex;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  background: #e74c3c;
+  border-radius: 50%;
+  justify-content: center;
+  align-items:  center;
+  width: 28px;
+  height: 28px;
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.rc-view-position {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  font-size: .8125rem;
+}
+
+.rc-view-photo {
+  object-fit: cover;
+  background: #f3f4f6;
+  border-radius: .375rem;
+  width: 100%;
+  max-height: 280px;
+}
+
+.rc-view-name {
+  color: #111827;
+  margin: .25rem 0 0;
+  font-size: 1.125rem;
+}
+
+.rc-view-desc {
+  color: #374151;
+  margin: 0;
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+
+.rc-view-coords {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  font-size: .8125rem;
+}
+
+.rc-view-nav {
+  display: flex;
+  gap: .5rem;
+}
+
+.rc-view-btn {
+  color: #111827;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: .5rem;
+  flex: 1;
+  min-height: 44px;
+  padding: .625rem .75rem;
+  transition: background .15s, border-color .15s;
+  font-size: .9375rem;
+  font-weight: 600;
+}
+
+.rc-view-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.rc-view-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .rc-form {
   display: flex;
   flex-direction: column;
@@ -342,8 +486,16 @@
   align-items:  center;
   width: 32px;
   height: 32px;
+  transition: transform .15s, box-shadow .15s, background .15s;
   font-size: .875rem;
   font-weight: 700;
+}
+
+.rc-waypoint-marker-active {
+  box-shadow: 0 0 0 4px #2563eb40, 0 4px 10px #00000059;
+  z-index: 2;
+  background: #2563eb;
+  transform: scale(1.25);
 }
 
 .marker-popup img {

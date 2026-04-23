@@ -87,7 +87,7 @@ export function initRoute(map) {
 export function createRouteRenderer(map) {
   let markers = [];
 
-  const render = (waypoints) => {
+  const render = (waypoints, activeIndex = -1) => {
     markers.forEach((m) => m.remove());
     markers = [];
 
@@ -106,6 +106,7 @@ export function createRouteRenderer(map) {
     waypoints.forEach((w, i) => {
       const el = document.createElement('div');
       el.className = 'rc-waypoint-marker';
+      if (i === activeIndex) el.classList.add('rc-waypoint-marker-active');
       el.textContent = String(i + 1);
 
       const content = document.createElement('div');
@@ -140,5 +141,11 @@ export function createRouteRenderer(map) {
     }
   };
 
-  return { render };
+  const setActive = (activeIndex) => {
+    markers.forEach((m, i) => {
+      m.getElement().classList.toggle('rc-waypoint-marker-active', i === activeIndex);
+    });
+  };
+
+  return { render, setActive };
 }
