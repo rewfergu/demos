@@ -13,6 +13,7 @@
     "@demo-archive/demo-leaflet": "workspace:*",
     "@demo-archive/island-counter": "workspace:*",
     "@demo-archive/demo-maplibre": "workspace:*",
+    "@demo-archive/demo-photo-location": "workspace:*",
     "@demo-archive/demo-p5": "workspace:*",
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
