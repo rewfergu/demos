@@ -8,10 +8,14 @@ export function initMap(container) {
     container,
     style: MAP_STYLE_URL,
     center: [0, 20],
-    zoom: 2,
+    zoom: 8,
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+  navigator.geolocation?.getCurrentPosition(({ coords }) => {
+    map.flyTo({ center: [coords.longitude, coords.latitude], zoom: 12 });
+  });
 
   return map;
 }
@@ -68,7 +72,7 @@ export function createRouteRenderer(map) {
   let markers = [];
 
   const render = (waypoints, activeIndex = -1) => {
-    markers.forEach((m) => m.remove());
+    markers.forEach(m => m.remove());
     markers = [];
 
     const source = map.getSource(ROUTE_SOURCE_ID);
@@ -77,7 +81,7 @@ export function createRouteRenderer(map) {
       properties: {},
       geometry: {
         type: 'LineString',
-        coordinates: waypoints.map((w) => [w.lng, w.lat]),
+        coordinates: waypoints.map(w => [w.lng, w.lat]),
       },
     };
     if (source) source.setData(data);
@@ -109,7 +113,10 @@ export function createRouteRenderer(map) {
         content.append(p);
       }
 
-      const popup = new maplibregl.Popup({ offset: 20, maxWidth: '280px' }).setDOMContent(content);
+      const popup = new maplibregl.Popup({
+        offset: 20,
+        maxWidth: '280px',
+      }).setDOMContent(content);
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([w.lng, w.lat])
@@ -120,16 +127,19 @@ export function createRouteRenderer(map) {
 
     if (waypoints.length >= 2) {
       const bounds = new maplibregl.LngLatBounds();
-      waypoints.forEach((w) => bounds.extend([w.lng, w.lat]));
+      waypoints.forEach(w => bounds.extend([w.lng, w.lat]));
       map.fitBounds(bounds, { padding: 80, maxZoom: 15, duration: 600 });
     } else if (waypoints.length === 1) {
       map.flyTo({ center: [waypoints[0].lng, waypoints[0].lat], zoom: 13 });
     }
   };
 
-  const setActive = (activeIndex) => {
+  const setActive = activeIndex => {
     markers.forEach((m, i) => {
-      m.getElement().classList.toggle('rc-waypoint-marker-active', i === activeIndex);
+      m.getElement().classList.toggle(
+        'rc-waypoint-marker-active',
+        i === activeIndex
+      );
     });
   };
 
