@@ -1,32 +1,12 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-const mapStyle = {
-  version: 8,
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-  sources: {
-    'osm-tiles': {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '&copy; OpenStreetMap contributors',
-    },
-  },
-  layers: [
-    {
-      id: 'osm-tiles-layer',
-      type: 'raster',
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-};
+const MAP_STYLE_URL = `https://api.maptiler.com/maps/base-v4/style.json?key=${import.meta.env.PUBLIC_MAPTILER_KEY}`;
 
 export function initMap(container) {
   const map = new maplibregl.Map({
     container,
-    style: mapStyle,
+    style: MAP_STYLE_URL,
     center: [0, 20],
     zoom: 2,
   });
