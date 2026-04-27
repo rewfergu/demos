@@ -1,1 +1,1 @@
-export { init } from './photo-form.js';
+export { default } from './RouteCreator.jsx';

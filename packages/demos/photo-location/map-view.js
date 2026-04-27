@@ -23,9 +23,9 @@ const mapStyle = {
   ],
 };
 
-export function initMap(containerId) {
+export function initMap(container) {
   const map = new maplibregl.Map({
-    container: containerId,
+    container,
     style: mapStyle,
     center: [0, 20],
     zoom: 2,
@@ -36,6 +36,27 @@ export function initMap(containerId) {
   return map;
 }
 
+function buildPopupContent(entry, imgUrl) {
+  const root = document.createElement('div');
+  root.className = 'marker-popup';
+  if (imgUrl) {
+    const img = document.createElement('img');
+    img.src = imgUrl;
+    img.alt = entry.name;
+    img.decoding = 'async';
+    root.append(img);
+  }
+  const h3 = document.createElement('h3');
+  h3.textContent = entry.name;
+  root.append(h3);
+  if (entry.description) {
+    const p = document.createElement('p');
+    p.textContent = entry.description;
+    root.append(p);
+  }
+  return root;
+}
+
 export function addMarker(map, entry, loadPhoto) {
   const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' });
   let objectUrl = null;
@@ -43,19 +64,11 @@ export function addMarker(map, entry, loadPhoto) {
   popup.on('open', async () => {
     const blob = await loadPhoto(entry.id);
     if (!popup.isOpen()) return;
-    let imgHtml = '';
     if (blob) {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(blob);
-      imgHtml = `<img src="${objectUrl}" alt="${entry.name}" decoding="async" />`;
     }
-    popup.setHTML(`
-      <div class="marker-popup">
-        ${imgHtml}
-        <h3>${entry.name}</h3>
-        <p>${entry.description}</p>
-      </div>
-    `);
+    popup.setDOMContent(buildPopupContent(entry, objectUrl));
   });
 
   popup.on('close', () => {

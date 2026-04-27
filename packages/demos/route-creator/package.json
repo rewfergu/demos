@@ -6,12 +6,13 @@
   "exports": {
     ".": "./index.js"
   },
-  "scripts": {
-    "dev": "bun build ./index.js --outdir=dist --target=browser --packages=external --watch",
-    "build": "bun build ./index.js --outdir=dist --target=browser --packages=external"
-  },
   "dependencies": {
     "maplibre-gl": "5.6.0",
-    "@demo-archive/demo-utils": "*"
+    "@demo-archive/demo-utils": "*",
+    "@demo-archive/demo-ui": "*"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }

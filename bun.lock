@@ -22,6 +22,7 @@
         "@demo-archive/demo-p5": "workspace:*",
         "@demo-archive/demo-photo-location": "workspace:*",
         "@demo-archive/demo-route-creator": "workspace:*",
+        "@demo-archive/demo-ui": "workspace:*",
         "@demo-archive/island-counter": "workspace:*",
         "@types/react": "^18.2.79",
         "@types/react-dom": "^18.2.25",
@@ -33,6 +34,21 @@
       "devDependencies": {
         "prettier": "^3.5.3",
         "prettier-plugin-astro": "^0.14.1",
+      },
+    },
+    "packages/demo-ui": {
+      "name": "@demo-archive/demo-ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "@demo-archive/demo-utils": "*",
+      },
+      "devDependencies": {
+        "@types/react": "^18.2.0",
+        "typescript": "^5.0.0",
+      },
+      "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
       },
     },
     "packages/demo-utils": {
@@ -75,16 +91,26 @@
       "name": "@demo-archive/demo-photo-location",
       "version": "1.0.0",
       "dependencies": {
+        "@demo-archive/demo-ui": "*",
         "@demo-archive/demo-utils": "*",
         "maplibre-gl": "5.6.0",
+      },
+      "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
       },
     },
     "packages/demos/route-creator": {
       "name": "@demo-archive/demo-route-creator",
       "version": "1.0.0",
       "dependencies": {
+        "@demo-archive/demo-ui": "*",
         "@demo-archive/demo-utils": "*",
         "maplibre-gl": "5.6.0",
+      },
+      "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
       },
     },
     "packages/island-counter": {
@@ -166,6 +192,8 @@
     "@demo-archive/demo-photo-location": ["@demo-archive/demo-photo-location@workspace:packages/demos/photo-location"],
 
     "@demo-archive/demo-route-creator": ["@demo-archive/demo-route-creator@workspace:packages/demos/route-creator"],
+
+    "@demo-archive/demo-ui": ["@demo-archive/demo-ui@workspace:packages/demo-ui"],
 
     "@demo-archive/demo-utils": ["@demo-archive/demo-utils@workspace:packages/demo-utils"],
 

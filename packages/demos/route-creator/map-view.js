@@ -23,9 +23,9 @@ const mapStyle = {
   ],
 };
 
-export function initMap(containerId) {
+export function initMap(container) {
   const map = new maplibregl.Map({
-    container: containerId,
+    container,
     style: mapStyle,
     center: [0, 20],
     zoom: 2,
