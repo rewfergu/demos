@@ -84,7 +84,9 @@
 /* Drag pin handle */
 .du-drag-pin-wrap {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
+  justify-content: space-around;
   gap: 0.625rem;
   padding: 0.5rem 0.625rem;
   background: #f9fafb;
@@ -107,7 +109,9 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .du-drag-pin:hover {
@@ -155,7 +159,10 @@
   font-weight: 600;
   cursor: pointer;
   min-height: 48px;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   font-family: inherit;
 }
 

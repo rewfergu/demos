@@ -80,24 +80,41 @@ export function usePhotoCapture(options: UsePhotoCaptureOptions = {}): UsePhotoC
       setGpsStatus({ message: 'Reading EXIF data...', kind: 'missing' });
 
       const gps = await extractGps(file);
-      if (gps) {
-        setLat(gps.lat.toFixed(6));
-        setLng(gps.lng.toFixed(6));
-        setPhotoHadGps(true);
-        setGpsStatus({
-          message: 'GPS coordinates extracted from photo. Drop the pin on the map to override.',
-          kind: 'found',
-        });
-        onGpsFoundRef.current?.({ lat: gps.lat, lng: gps.lng });
-      } else {
+      if (!gps) {
         setPhotoHadGps(false);
         setGpsStatus({
           message: 'No GPS data found. Drag the pin onto the map or enter coordinates manually.',
           kind: 'missing',
         });
+        return;
       }
+
+      const hasExistingCoords =
+        Number.isFinite(parseFloat(lat)) && Number.isFinite(parseFloat(lng));
+      if (hasExistingCoords) {
+        const accept = window.confirm(
+          "This photo has GPS coordinates. Use them instead of your current location?",
+        );
+        if (!accept) {
+          setPhotoHadGps(false);
+          setGpsStatus({
+            message: 'Photo has GPS data but kept existing coordinates.',
+            kind: 'found',
+          });
+          return;
+        }
+      }
+
+      setLat(gps.lat.toFixed(6));
+      setLng(gps.lng.toFixed(6));
+      setPhotoHadGps(true);
+      setGpsStatus({
+        message: 'GPS coordinates extracted from photo. Drop the pin on the map to override.',
+        kind: 'found',
+      });
+      onGpsFoundRef.current?.({ lat: gps.lat, lng: gps.lng });
     },
-    [releaseOwnedUrl],
+    [lat, lng, releaseOwnedUrl],
   );
 
   const handlePinDrop = useCallback(

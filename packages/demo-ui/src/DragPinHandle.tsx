@@ -55,7 +55,10 @@ export function DragPinHandle({
 
       const onMove = (ev: PointerEvent) => {
         positionGhost(ev.clientX, ev.clientY);
-        dropTarget.classList.toggle('du-drop-target', isOverTarget(ev.clientX, ev.clientY));
+        dropTarget.classList.toggle(
+          'du-drop-target',
+          isOverTarget(ev.clientX, ev.clientY)
+        );
       };
 
       const onUp = (ev: PointerEvent) => {
@@ -89,7 +92,13 @@ export function DragPinHandle({
         aria-label={ariaLabel}
         title={ariaLabel}
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          width="22"
+          height="22"
+          aria-hidden="true"
+        >
           <path d={PIN_PATH} />
         </svg>
       </button>
