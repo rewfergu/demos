@@ -4,6 +4,7 @@
   "workspaces": ["packages/*", "packages/demos/*"],
   "scripts": {
     "dev": "bun run --filter @demo-archive/astro-site dev",
+    "dev:mobile": "bun run --filter @demo-archive/astro-site dev -- --host",
     "build": "bun run build:islands && bun run --filter @demo-archive/astro-site build",
     "build:islands": "bun run --filter './packages/demos/*' build",
     "dev:all": "bun run --filter './packages/island-*' dev & bun run --filter @demo-archive/astro-site dev",

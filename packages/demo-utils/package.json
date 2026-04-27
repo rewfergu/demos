@@ -1,0 +1,14 @@
+{
+  "name": "@demo-archive/demo-utils",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./image-processing": "./image-processing.js",
+    "./exif": "./exif.js",
+    "./marker-drag": "./marker-drag.js"
+  },
+  "dependencies": {
+    "exifreader": "^4.14.0"
+  }
+}

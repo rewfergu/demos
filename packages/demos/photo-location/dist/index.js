@@ -1,33 +1,21 @@
-// exif.js
-import ExifReader from "exifreader";
-async function extractGps(file) {
-  try {
-    const buffer = await file.arrayBuffer();
-    const tags = ExifReader.load(buffer, { expanded: true });
-    if (tags.gps && tags.gps.Latitude != null && tags.gps.Longitude != null) {
-      return {
-        lat: tags.gps.Latitude,
-        lng: tags.gps.Longitude
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+// photo-form.js
+import { extractGps } from "@demo-archive/demo-utils/exif";
+import { processImage } from "@demo-archive/demo-utils/image-processing";
+import { PIN_SVG, setupMarkerDrag } from "@demo-archive/demo-utils/marker-drag";
 
 // store.js
 var DB_NAME = "photo-location-db";
-var DB_VERSION = 1;
+var DB_VERSION = 2;
 var STORE_NAME = "entries";
 function openDb() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
       }
+      db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -44,13 +32,34 @@ async function saveEntry(entry) {
     tx.oncomplete = () => db.close();
   });
 }
-async function getAllEntries() {
+async function getAllEntriesMeta() {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    const request = store.openCursor();
+    const results = [];
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor) {
+        const { photoThumb, photoFull, ...meta } = cursor.value;
+        results.push(meta);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+async function getEntryPhoto(id, key = "photoThumb") {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result?.[key] ?? null);
     request.onerror = () => reject(request.error);
     tx.oncomplete = () => db.close();
   });
@@ -90,15 +99,34 @@ function initMap(containerId) {
   map.addControl(new maplibregl.NavigationControl, "top-right");
   return map;
 }
-function addMarker(map, entry) {
-  const popupHtml = `
-    <div class="marker-popup">
-      <img src="${entry.photoDataUrl}" alt="${entry.name}" />
-      <h3>${entry.name}</h3>
-      <p>${entry.description}</p>
-    </div>
-  `;
-  const popup = new maplibregl.Popup({ offset: 25, maxWidth: "280px" }).setHTML(popupHtml);
+function addMarker(map, entry, loadPhoto) {
+  const popup = new maplibregl.Popup({ offset: 25, maxWidth: "280px" });
+  let objectUrl = null;
+  popup.on("open", async () => {
+    const blob = await loadPhoto(entry.id);
+    if (!popup.isOpen())
+      return;
+    let imgHtml = "";
+    if (blob) {
+      if (objectUrl)
+        URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(blob);
+      imgHtml = `<img src="${objectUrl}" alt="${entry.name}" decoding="async" />`;
+    }
+    popup.setHTML(`
+      <div class="marker-popup">
+        ${imgHtml}
+        <h3>${entry.name}</h3>
+        <p>${entry.description}</p>
+      </div>
+    `);
+  });
+  popup.on("close", () => {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+  });
   new maplibregl.Marker({ color: "#e74c3c" }).setLngLat([entry.lng, entry.lat]).setPopup(popup).addTo(map);
 }
 function createPreviewMarker(map, onDragEnd) {
@@ -124,10 +152,10 @@ function createPreviewMarker(map, onDragEnd) {
     }
   };
 }
-function loadMarkers(map, entries) {
+function loadMarkers(map, entries, loadPhoto) {
   if (entries.length === 0)
     return;
-  entries.forEach((entry) => addMarker(map, entry));
+  entries.forEach((entry) => addMarker(map, entry, loadPhoto));
   if (entries.length === 1) {
     map.flyTo({ center: [entries[0].lng, entries[0].lat], zoom: 12 });
   } else {
@@ -138,36 +166,7 @@ function loadMarkers(map, entries) {
 }
 
 // photo-form.js
-var PIN_SVG = `
-  <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" aria-hidden="true">
-    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
-  </svg>
-`;
-function resizeImage(file, maxDim = 800) {
-  return new Promise((resolve) => {
-    const img = new Image;
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round(height * maxDim / width);
-          width = maxDim;
-        } else {
-          width = Math.round(width * maxDim / height);
-          height = maxDim;
-        }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
-    };
-    img.src = url;
-  });
-}
+var loadPhoto = (id) => getEntryPhoto(id, "photoThumb");
 function buildForm(container) {
   container.innerHTML = `
     <div class="pl-layout">
@@ -175,7 +174,7 @@ function buildForm(container) {
         <form class="pl-form" id="pl-form">
           <div class="pl-field">
             <label for="pl-photo">Photo</label>
-            <input type="file" id="pl-photo" accept="image/*" capture="environment" required />
+            <input type="file" id="pl-photo" accept="image/*" capture="environment" />
             <div id="pl-preview" class="pl-preview" hidden>
               <img id="pl-preview-img" alt="Preview" />
             </div>
@@ -218,45 +217,6 @@ function buildForm(container) {
     </div>
   `;
 }
-function setupMarkerDrag(handle, mapContainer, onDropOnMap) {
-  handle.addEventListener("pointerdown", (e) => {
-    if (e.button !== undefined && e.button !== 0)
-      return;
-    e.preventDefault();
-    handle.setPointerCapture?.(e.pointerId);
-    const ghost = document.createElement("div");
-    ghost.className = "pl-marker-drag-ghost";
-    ghost.innerHTML = PIN_SVG;
-    document.body.appendChild(ghost);
-    const positionGhost = (clientX, clientY) => {
-      ghost.style.left = `${clientX}px`;
-      ghost.style.top = `${clientY}px`;
-    };
-    positionGhost(e.clientX, e.clientY);
-    const isOverMap = (clientX, clientY) => {
-      const rect = mapContainer.getBoundingClientRect();
-      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
-    };
-    const onMove = (ev) => {
-      positionGhost(ev.clientX, ev.clientY);
-      mapContainer.classList.toggle("pl-map-drop-target", isOverMap(ev.clientX, ev.clientY));
-    };
-    const onUp = (ev) => {
-      document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", onUp);
-      document.removeEventListener("pointercancel", onUp);
-      ghost.remove();
-      mapContainer.classList.remove("pl-map-drop-target");
-      if (ev.type === "pointerup" && isOverMap(ev.clientX, ev.clientY)) {
-        const rect = mapContainer.getBoundingClientRect();
-        onDropOnMap(ev.clientX - rect.left, ev.clientY - rect.top);
-      }
-    };
-    document.addEventListener("pointermove", onMove);
-    document.addEventListener("pointerup", onUp);
-    document.addEventListener("pointercancel", onUp);
-  });
-}
 async function init(containerId = "photo-location") {
   const container = document.getElementById(containerId);
   if (!container)
@@ -272,8 +232,21 @@ async function init(containerId = "photo-location") {
   const gpsStatus = document.getElementById("pl-gps-status");
   const mapContainer = document.getElementById("pl-map");
   const dragHandle = document.getElementById("pl-marker-drag");
-  let currentDataUrl = null;
+  let currentBlobs = null;
+  let previewObjectUrl = null;
   let photoHadGps = false;
+  const setPreviewSrc = (blob) => {
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl);
+      previewObjectUrl = null;
+    }
+    if (blob) {
+      previewObjectUrl = URL.createObjectURL(blob);
+      previewImg.src = previewObjectUrl;
+    } else {
+      previewImg.removeAttribute("src");
+    }
+  };
   const setStatus = (message, kind) => {
     gpsStatus.hidden = false;
     gpsStatus.textContent = message;
@@ -298,8 +271,8 @@ async function init(containerId = "photo-location") {
     const file = photoInput.files[0];
     if (!file)
       return;
-    currentDataUrl = await resizeImage(file);
-    previewImg.src = currentDataUrl;
+    currentBlobs = await processImage(file);
+    setPreviewSrc(currentBlobs.thumb);
     preview.hidden = false;
     setStatus("Reading EXIF data...", "missing");
     const gps = await extractGps(file);
@@ -327,31 +300,31 @@ async function init(containerId = "photo-location") {
     } else {
       setStatus("Location set from map. Drag the marker to fine-tune.", "found");
     }
-  });
+  }, { ghostClass: "pl-marker-drag-ghost", dropTargetClass: "pl-map-drop-target" });
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!currentDataUrl)
-      return;
     const entry = {
       name: document.getElementById("pl-name").value.trim(),
       description: document.getElementById("pl-desc").value.trim(),
       lat: parseFloat(latInput.value),
       lng: parseFloat(lngInput.value),
-      photoDataUrl: currentDataUrl
+      photoThumb: currentBlobs?.thumb ?? null,
+      photoFull: currentBlobs?.full ?? null
     };
-    await saveEntry(entry);
-    addMarker(map, entry);
+    const id = await saveEntry(entry);
+    addMarker(map, { ...entry, id }, loadPhoto);
     map.flyTo({ center: [entry.lng, entry.lat], zoom: 14 });
     form.reset();
     preview.hidden = true;
     gpsStatus.hidden = true;
     previewMarker.clear();
-    currentDataUrl = null;
+    setPreviewSrc(null);
+    currentBlobs = null;
     photoHadGps = false;
   });
   try {
-    const entries = await getAllEntries();
-    map.on("load", () => loadMarkers(map, entries));
+    const entries = await getAllEntriesMeta();
+    map.on("load", () => loadMarkers(map, entries, loadPhoto));
   } catch {
   }
   if ("serviceWorker" in navigator) {

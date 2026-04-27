@@ -315,7 +315,13 @@
 }
 
 /* Submit button */
+.rc-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .rc-submit {
+  flex: 1;
   padding: 0.75rem 1.5rem;
   background: #2563eb;
   color: #fff;
@@ -334,6 +340,44 @@
 
 .rc-submit:active {
   background: #1e40af;
+}
+
+.rc-cancel {
+  padding: 0.75rem 1.25rem;
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.rc-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.rc-view-edit {
+  margin-top: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rc-view-edit:hover {
+  background: #2563eb;
+  color: #fff;
 }
 
 /* Route panel */
@@ -401,6 +445,11 @@
   object-fit: cover;
   border-radius: 0.25rem;
   flex-shrink: 0;
+}
+
+.rc-list-thumb-empty {
+  background: #f3f4f6;
+  border: 1px dashed #d1d5db;
 }
 
 .rc-list-info {

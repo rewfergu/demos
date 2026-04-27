@@ -36,16 +36,34 @@ export function initMap(containerId) {
   return map;
 }
 
-export function addMarker(map, entry) {
-  const popupHtml = `
-    <div class="marker-popup">
-      <img src="${entry.photoDataUrl}" alt="${entry.name}" />
-      <h3>${entry.name}</h3>
-      <p>${entry.description}</p>
-    </div>
-  `;
+export function addMarker(map, entry, loadPhoto) {
+  const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' });
+  let objectUrl = null;
 
-  const popup = new maplibregl.Popup({ offset: 25, maxWidth: '280px' }).setHTML(popupHtml);
+  popup.on('open', async () => {
+    const blob = await loadPhoto(entry.id);
+    if (!popup.isOpen()) return;
+    let imgHtml = '';
+    if (blob) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(blob);
+      imgHtml = `<img src="${objectUrl}" alt="${entry.name}" decoding="async" />`;
+    }
+    popup.setHTML(`
+      <div class="marker-popup">
+        ${imgHtml}
+        <h3>${entry.name}</h3>
+        <p>${entry.description}</p>
+      </div>
+    `);
+  });
+
+  popup.on('close', () => {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+  });
 
   new maplibregl.Marker({ color: '#e74c3c' })
     .setLngLat([entry.lng, entry.lat])
@@ -77,10 +95,10 @@ export function createPreviewMarker(map, onDragEnd) {
   };
 }
 
-export function loadMarkers(map, entries) {
+export function loadMarkers(map, entries, loadPhoto) {
   if (entries.length === 0) return;
 
-  entries.forEach((entry) => addMarker(map, entry));
+  entries.forEach((entry) => addMarker(map, entry, loadPhoto));
 
   if (entries.length === 1) {
     map.flyTo({ center: [entries[0].lng, entries[0].lat], zoom: 12 });

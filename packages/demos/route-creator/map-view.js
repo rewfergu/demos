@@ -114,12 +114,15 @@ export function createRouteRenderer(map) {
 
       const content = document.createElement('div');
       content.className = 'marker-popup';
-      const img = document.createElement('img');
-      img.src = w.photoDataUrl;
-      img.alt = w.name;
+      if (w.thumbUrl) {
+        const img = document.createElement('img');
+        img.src = w.thumbUrl;
+        img.alt = w.name;
+        content.append(img);
+      }
       const h3 = document.createElement('h3');
       h3.textContent = `${i + 1}. ${w.name}`;
-      content.append(img, h3);
+      content.append(h3);
       if (w.description) {
         const p = document.createElement('p');
         p.textContent = w.description;

@@ -1,38 +1,8 @@
-import { extractGps } from './exif.js';
+import { extractGps } from '@demo-archive/demo-utils/exif';
+import { processImage } from '@demo-archive/demo-utils/image-processing';
+import { PIN_SVG, setupMarkerDrag } from '@demo-archive/demo-utils/marker-drag';
 import { initMap, initRoute, createRouteRenderer, createPreviewMarker } from './map-view.js';
 import './style.css';
-
-const PIN_SVG = `
-  <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22" aria-hidden="true">
-    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
-  </svg>
-`;
-
-function resizeImage(file, maxDim = 800) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-    img.src = url;
-  });
-}
 
 function buildForm(container) {
   container.innerHTML = `
@@ -53,6 +23,7 @@ function buildForm(container) {
             <h2 class="rc-view-name" id="rc-view-name"></h2>
             <p class="rc-view-desc" id="rc-view-desc" hidden></p>
             <div class="rc-view-coords" id="rc-view-coords"></div>
+            <button type="button" class="rc-view-edit" id="rc-view-edit">Edit waypoint</button>
           </article>
           <div class="rc-view-nav" id="rc-view-nav" hidden>
             <button type="button" class="rc-view-btn" id="rc-view-prev">Previous</button>
@@ -62,7 +33,7 @@ function buildForm(container) {
         <form class="rc-form" id="rc-form">
           <div class="rc-field">
             <label for="rc-photo">Photo</label>
-            <input type="file" id="rc-photo" accept="image/*" capture="environment" required />
+            <input type="file" id="rc-photo" accept="image/*" capture="environment" />
             <div id="rc-preview" class="rc-preview" hidden>
               <img id="rc-preview-img" alt="Preview" />
             </div>
@@ -96,7 +67,10 @@ function buildForm(container) {
             <label for="rc-desc">Description</label>
             <textarea id="rc-desc" rows="3" placeholder="Describe this stop..."></textarea>
           </div>
-          <button type="submit" class="rc-submit">Add Waypoint</button>
+          <div class="rc-form-actions">
+            <button type="submit" class="rc-submit" id="rc-submit">Add Waypoint</button>
+            <button type="button" class="rc-cancel" id="rc-cancel-edit" hidden>Cancel</button>
+          </div>
         </form>
         <div class="rc-route-panel">
           <div class="rc-route-header">
@@ -113,56 +87,6 @@ function buildForm(container) {
       </div>
     </div>
   `;
-}
-
-function setupMarkerDrag(handle, mapContainer, onDropOnMap) {
-  handle.addEventListener('pointerdown', (e) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.preventDefault();
-    handle.setPointerCapture?.(e.pointerId);
-
-    const ghost = document.createElement('div');
-    ghost.className = 'rc-marker-drag-ghost';
-    ghost.innerHTML = PIN_SVG;
-    document.body.appendChild(ghost);
-    const positionGhost = (clientX, clientY) => {
-      ghost.style.left = `${clientX}px`;
-      ghost.style.top = `${clientY}px`;
-    };
-    positionGhost(e.clientX, e.clientY);
-
-    const isOverMap = (clientX, clientY) => {
-      const rect = mapContainer.getBoundingClientRect();
-      return (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
-      );
-    };
-
-    const onMove = (ev) => {
-      positionGhost(ev.clientX, ev.clientY);
-      mapContainer.classList.toggle('rc-map-drop-target', isOverMap(ev.clientX, ev.clientY));
-    };
-
-    const onUp = (ev) => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
-      document.removeEventListener('pointercancel', onUp);
-      ghost.remove();
-      mapContainer.classList.remove('rc-map-drop-target');
-
-      if (ev.type === 'pointerup' && isOverMap(ev.clientX, ev.clientY)) {
-        const rect = mapContainer.getBoundingClientRect();
-        onDropOnMap(ev.clientX - rect.left, ev.clientY - rect.top);
-      }
-    };
-
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-    document.addEventListener('pointercancel', onUp);
-  });
 }
 
 export async function init(containerId = 'route-creator') {
@@ -204,13 +128,78 @@ export async function init(containerId = 'route-creator') {
   const viewCoordsEl = document.getElementById('rc-view-coords');
   const viewPrevBtn = document.getElementById('rc-view-prev');
   const viewNextBtn = document.getElementById('rc-view-next');
+  const viewEditBtn = document.getElementById('rc-view-edit');
+  const submitBtn = document.getElementById('rc-submit');
+  const cancelEditBtn = document.getElementById('rc-cancel-edit');
 
-  let currentDataUrl = null;
+  let currentBlobs = null;
+  let previewObjectUrl = null;
   let photoHadGps = false;
   const waypoints = [];
   let nextId = 1;
   let mode = 'edit';
   let viewIndex = 0;
+  let editingId = null;
+
+  const setPreviewSrc = (blob) => {
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl);
+      previewObjectUrl = null;
+    }
+    if (blob) {
+      previewObjectUrl = URL.createObjectURL(blob);
+      previewImg.src = previewObjectUrl;
+    } else {
+      previewImg.removeAttribute('src');
+    }
+  };
+
+  const releaseWaypoint = (w) => {
+    if (w.thumbUrl) URL.revokeObjectURL(w.thumbUrl);
+    if (w.fullUrl) URL.revokeObjectURL(w.fullUrl);
+  };
+
+  const resetFormState = () => {
+    form.reset();
+    preview.hidden = true;
+    gpsStatus.hidden = true;
+    previewMarker.clear();
+    setPreviewSrc(null);
+    currentBlobs = null;
+    photoHadGps = false;
+  };
+
+  const enterEditMode = (w) => {
+    editingId = w.id;
+    nameInput.value = w.name;
+    descInput.value = w.description;
+    latInput.value = w.lat.toFixed(6);
+    lngInput.value = w.lng.toFixed(6);
+    if (w.fullUrl) {
+      previewImg.src = w.fullUrl;
+      preview.hidden = false;
+    } else {
+      previewImg.removeAttribute('src');
+      preview.hidden = true;
+    }
+    photoInput.value = '';
+    submitBtn.textContent = 'Update Waypoint';
+    cancelEditBtn.hidden = false;
+    gpsStatus.hidden = true;
+    previewMarker.set(w.lng, w.lat);
+  };
+
+  const exitEditMode = () => {
+    editingId = null;
+    submitBtn.textContent = 'Add Waypoint';
+    cancelEditBtn.hidden = true;
+    resetFormState();
+  };
+
+  const confirmDiscardIfEditing = () => {
+    if (editingId == null) return true;
+    return window.confirm('Discard changes to this waypoint?');
+  };
 
   const setStatus = (message, kind) => {
     gpsStatus.hidden = false;
@@ -240,8 +229,8 @@ export async function init(containerId = 'route-creator') {
     const file = photoInput.files[0];
     if (!file) return;
 
-    currentDataUrl = await resizeImage(file);
-    previewImg.src = currentDataUrl;
+    currentBlobs = await processImage(file);
+    setPreviewSrc(currentBlobs.thumb);
     preview.hidden = false;
 
     setStatus('Reading EXIF data...', 'missing');
@@ -272,7 +261,7 @@ export async function init(containerId = 'route-creator') {
     } else {
       setStatus('Location set from map. Drag the marker to fine-tune.', 'found');
     }
-  });
+  }, { ghostClass: 'rc-marker-drag-ghost', dropTargetClass: 'rc-map-drop-target' });
 
   function renderList() {
     listEl.innerHTML = '';
@@ -284,10 +273,15 @@ export async function init(containerId = 'route-creator') {
       index.className = 'rc-list-index';
       index.textContent = String(i + 1);
 
-      const thumb = document.createElement('img');
-      thumb.className = 'rc-list-thumb';
-      thumb.src = w.photoDataUrl;
-      thumb.alt = '';
+      const thumb = w.thumbUrl
+        ? Object.assign(document.createElement('img'), {
+            className: 'rc-list-thumb',
+            src: w.thumbUrl,
+            alt: '',
+          })
+        : Object.assign(document.createElement('div'), {
+            className: 'rc-list-thumb rc-list-thumb-empty',
+          });
 
       const info = document.createElement('div');
       info.className = 'rc-list-info';
@@ -305,6 +299,10 @@ export async function init(containerId = 'route-creator') {
       flyBtn.setAttribute('aria-label', `Fly to waypoint ${i + 1}`);
       flyBtn.textContent = 'Show';
       flyBtn.addEventListener('click', () => {
+        if (editingId !== null && editingId !== w.id) {
+          if (!confirmDiscardIfEditing()) return;
+          exitEditMode();
+        }
         if (mode === 'view') {
           viewIndex = i;
           renderView();
@@ -318,8 +316,11 @@ export async function init(containerId = 'route-creator') {
       removeBtn.setAttribute('aria-label', `Remove waypoint ${i + 1}`);
       removeBtn.textContent = '×';
       removeBtn.addEventListener('click', () => {
+        if (!confirmDiscardIfEditing()) return;
+        if (editingId !== null) exitEditMode();
         const idx = waypoints.findIndex((x) => x.id === w.id);
         if (idx >= 0) {
+          releaseWaypoint(waypoints[idx]);
           waypoints.splice(idx, 1);
           refresh();
         }
@@ -352,8 +353,14 @@ export async function init(containerId = 'route-creator') {
     const w = waypoints[viewIndex];
     viewIndexEl.textContent = String(viewIndex + 1);
     viewPositionEl.textContent = `${viewIndex + 1} of ${count}`;
-    viewPhotoEl.src = w.photoDataUrl;
-    viewPhotoEl.alt = w.name;
+    if (w.fullUrl) {
+      viewPhotoEl.src = w.fullUrl;
+      viewPhotoEl.alt = w.name;
+      viewPhotoEl.hidden = false;
+    } else {
+      viewPhotoEl.removeAttribute('src');
+      viewPhotoEl.hidden = true;
+    }
     viewNameEl.textContent = w.name;
     viewDescEl.textContent = w.description;
     viewDescEl.hidden = !w.description;
@@ -393,7 +400,25 @@ export async function init(containerId = 'route-creator') {
   }
 
   modeEditBtn.addEventListener('click', () => setMode('edit'));
-  modeViewBtn.addEventListener('click', () => setMode('view'));
+  modeViewBtn.addEventListener('click', () => {
+    if (!confirmDiscardIfEditing()) return;
+    if (editingId !== null) exitEditMode();
+    setMode('view');
+  });
+
+  viewEditBtn.addEventListener('click', () => {
+    const w = waypoints[viewIndex];
+    if (!w) return;
+    enterEditMode(w);
+    setMode('edit');
+    map.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+  });
+
+  cancelEditBtn.addEventListener('click', () => {
+    if (!confirmDiscardIfEditing()) return;
+    exitEditMode();
+    setMode('view');
+  });
 
   viewPrevBtn.addEventListener('click', () => {
     if (viewIndex > 0) {
@@ -414,13 +439,40 @@ export async function init(containerId = 'route-creator') {
   });
 
   clearBtn.addEventListener('click', () => {
+    if (!confirmDiscardIfEditing()) return;
+    if (editingId !== null) exitEditMode();
+    waypoints.forEach(releaseWaypoint);
     waypoints.length = 0;
     refresh();
   });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!currentDataUrl) return;
+
+    if (editingId !== null) {
+      const idx = waypoints.findIndex((x) => x.id === editingId);
+      if (idx < 0) {
+        exitEditMode();
+        return;
+      }
+      const w = waypoints[idx];
+      w.name = nameInput.value.trim();
+      w.description = descInput.value.trim();
+      w.lat = parseFloat(latInput.value);
+      w.lng = parseFloat(lngInput.value);
+      if (currentBlobs) {
+        releaseWaypoint(w);
+        w.photoThumb = currentBlobs.thumb;
+        w.photoFull = currentBlobs.full;
+        w.thumbUrl = URL.createObjectURL(currentBlobs.thumb);
+        w.fullUrl = URL.createObjectURL(currentBlobs.full);
+      }
+      viewIndex = idx;
+      exitEditMode();
+      setMode('view');
+      refresh();
+      return;
+    }
 
     const entry = {
       id: nextId++,
@@ -428,18 +480,15 @@ export async function init(containerId = 'route-creator') {
       description: descInput.value.trim(),
       lat: parseFloat(latInput.value),
       lng: parseFloat(lngInput.value),
-      photoDataUrl: currentDataUrl,
+      photoThumb: currentBlobs?.thumb ?? null,
+      photoFull: currentBlobs?.full ?? null,
+      thumbUrl: currentBlobs ? URL.createObjectURL(currentBlobs.thumb) : null,
+      fullUrl: currentBlobs ? URL.createObjectURL(currentBlobs.full) : null,
     };
 
     waypoints.push(entry);
     refresh();
-
-    form.reset();
-    preview.hidden = true;
-    gpsStatus.hidden = true;
-    previewMarker.clear();
-    currentDataUrl = null;
-    photoHadGps = false;
+    resetFormState();
   });
 
   renderList();
