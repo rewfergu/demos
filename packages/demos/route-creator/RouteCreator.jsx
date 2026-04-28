@@ -428,7 +428,20 @@ export default function RouteCreator() {
           ) : (
             <ol className="rc-list">
               {waypoints.map((w, i) => (
-                <li key={w.id} className="rc-list-item">
+                <li
+                  key={w.id}
+                  className="rc-list-item"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Show waypoint ${i + 1}`}
+                  onClick={() => flyToWaypoint(w, i)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      flyToWaypoint(w, i);
+                    }
+                  }}
+                >
                   <span className="rc-list-index">{i + 1}</span>
                   {w.thumbUrl ? (
                     <img className="rc-list-thumb" src={w.thumbUrl} alt="" />
@@ -443,17 +456,12 @@ export default function RouteCreator() {
                   </div>
                   <button
                     type="button"
-                    className="rc-list-fly"
-                    aria-label={`Fly to waypoint ${i + 1}`}
-                    onClick={() => flyToWaypoint(w, i)}
-                  >
-                    Show
-                  </button>
-                  <button
-                    type="button"
                     className="rc-list-remove"
                     aria-label={`Remove waypoint ${i + 1}`}
-                    onClick={() => removeWaypoint(w.id)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      removeWaypoint(w.id);
+                    }}
                   >
                     ×
                   </button>
