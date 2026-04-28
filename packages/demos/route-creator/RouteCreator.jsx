@@ -10,7 +10,12 @@ import {
   usePhotoCapture,
 } from '@demo-archive/demo-ui';
 import '@demo-archive/demo-ui/styles.css';
-import { initMap, initRoute, createRouteRenderer, createPreviewMarker } from './map-view.js';
+import {
+  initMap,
+  initRoute,
+  createRouteRenderer,
+  createPreviewMarker,
+} from './map-view.js';
 import './style.css';
 
 function clampIndex(idx, length) {
@@ -30,6 +35,7 @@ export default function RouteCreator() {
   const routeRendererRef = useRef(null);
   const photoInputRef = useRef(null);
   const nextIdRef = useRef(1);
+  const handleMarkerClickRef = useRef(null);
 
   const [waypoints, setWaypoints] = useState([]);
   const [mode, setMode] = useState('edit');
@@ -49,7 +55,9 @@ export default function RouteCreator() {
     const map = initMap(mapContainerRef.current);
     mapRef.current = map;
     initRoute(map);
-    routeRendererRef.current = createRouteRenderer(map);
+    routeRendererRef.current = createRouteRenderer(map, index => {
+      handleMarkerClickRef.current?.(index);
+    });
     previewMarkerRef.current = createPreviewMarker(map, (lng, lat) => {
       photo.setLat(lat.toFixed(6));
       photo.setLng(lng.toFixed(6));
@@ -72,8 +80,10 @@ export default function RouteCreator() {
     if (
       Number.isFinite(latNum) &&
       Number.isFinite(lngNum) &&
-      latNum >= -90 && latNum <= 90 &&
-      lngNum >= -180 && lngNum <= 180
+      latNum >= -90 &&
+      latNum <= 90 &&
+      lngNum >= -180 &&
+      lngNum <= 180
     ) {
       marker.set(lngNum, latNum);
     } else {
@@ -84,15 +94,30 @@ export default function RouteCreator() {
   useEffect(() => {
     const renderer = routeRendererRef.current;
     if (!renderer) return;
-    const activeIdx = mode === 'view' && waypoints.length > 0 ? clampIndex(viewIndex, waypoints.length) : -1;
+    const activeIdx =
+      mode === 'view' && waypoints.length > 0
+        ? clampIndex(viewIndex, waypoints.length)
+        : -1;
     renderer.render(waypoints, activeIdx);
   }, [waypoints, viewIndex, mode]);
 
   // Revoke any remaining waypoint URLs on unmount.
-  useEffect(() => () => {
-    waypoints.forEach(releaseWaypoint);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(
+    () => () => {
+      waypoints.forEach(releaseWaypoint);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    []
+  );
+
+  handleMarkerClickRef.current = index => {
+    if (!confirmDiscardIfEditing()) return;
+    if (editingId !== null) exitEditMode();
+    setMode('view');
+    setViewIndex(index);
+    const w = waypoints[index];
+    if (w) mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 18 });
+  };
 
   const resetFormState = () => {
     setName('');
@@ -102,7 +127,7 @@ export default function RouteCreator() {
     previewMarkerRef.current?.clear();
   };
 
-  const enterEditMode = (w) => {
+  const enterEditMode = w => {
     setEditingId(w.id);
     setName(w.name);
     setDescription(w.description);
@@ -129,7 +154,7 @@ export default function RouteCreator() {
     photo.handlePinDrop({ lat, lng });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = e => {
     e.preventDefault();
     const map = mapRef.current;
     if (!map) return;
@@ -141,11 +166,17 @@ export default function RouteCreator() {
 
     if (editingId !== null) {
       let updatedIdx = -1;
-      setWaypoints((prev) =>
+      setWaypoints(prev =>
         prev.map((w, i) => {
           if (w.id !== editingId) return w;
           updatedIdx = i;
-          let next = { ...w, name: trimmedName, description: trimmedDesc, lat: latNum, lng: lngNum };
+          let next = {
+            ...w,
+            name: trimmedName,
+            description: trimmedDesc,
+            lat: latNum,
+            lng: lngNum,
+          };
           if (photo.photoBlobs) {
             if (w.thumbUrl) URL.revokeObjectURL(w.thumbUrl);
             if (w.fullUrl) URL.revokeObjectURL(w.fullUrl);
@@ -158,7 +189,7 @@ export default function RouteCreator() {
             };
           }
           return next;
-        }),
+        })
       );
       if (updatedIdx >= 0) setViewIndex(updatedIdx);
       setEditingId(null);
@@ -169,7 +200,7 @@ export default function RouteCreator() {
 
     const id = nextIdRef.current++;
     const blobs = photo.photoBlobs;
-    setWaypoints((prev) => [
+    setWaypoints(prev => [
       ...prev,
       {
         id,
@@ -186,11 +217,11 @@ export default function RouteCreator() {
     resetFormState();
   };
 
-  const removeWaypoint = (id) => {
+  const removeWaypoint = id => {
     if (!confirmDiscardIfEditing()) return;
     if (editingId !== null) exitEditMode();
-    setWaypoints((prev) => {
-      const idx = prev.findIndex((w) => w.id === id);
+    setWaypoints(prev => {
+      const idx = prev.findIndex(w => w.id === id);
       if (idx < 0) return prev;
       releaseWaypoint(prev[idx]);
       const next = prev.slice();
@@ -205,19 +236,20 @@ export default function RouteCreator() {
       exitEditMode();
     }
     if (mode === 'view') setViewIndex(listIndex);
-    mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+    mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 18 });
+    console.log('flyToWaypoint', w);
   };
 
   const clearRoute = () => {
     if (!confirmDiscardIfEditing()) return;
     if (editingId !== null) exitEditMode();
-    setWaypoints((prev) => {
+    setWaypoints(prev => {
       prev.forEach(releaseWaypoint);
       return [];
     });
   };
 
-  const switchMode = (next) => {
+  const switchMode = next => {
     if (next === mode) return;
     if (next === 'view') {
       if (!confirmDiscardIfEditing()) return;
@@ -244,17 +276,19 @@ export default function RouteCreator() {
     setMode('view');
   };
 
-  const stepView = (delta) => {
+  const stepView = delta => {
     const next = clampIndex(viewIndex + delta, waypoints.length);
     if (next === viewIndex) return;
     setViewIndex(next);
     const w = waypoints[next];
-    if (w) mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 14 });
+    if (w) mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 18 });
+    console.log('stepView', mapRef.current, w);
   };
 
   const count = waypoints.length;
   const viewSafeIndex = clampIndex(viewIndex, count);
-  const currentView = mode === 'view' && count > 0 ? waypoints[viewSafeIndex] : null;
+  const currentView =
+    mode === 'view' && count > 0 ? waypoints[viewSafeIndex] : null;
 
   return (
     <div className="rc-layout">
@@ -283,27 +317,53 @@ export default function RouteCreator() {
         {mode === 'view' ? (
           <section className="rc-view">
             {count === 0 ? (
-              <p className="rc-view-empty">No waypoints yet. Switch to Edit to add some.</p>
+              <p className="rc-view-empty">
+                No waypoints yet. Switch to Edit to add some.
+              </p>
             ) : (
               <>
                 <article className="rc-view-card">
                   <header className="rc-view-head">
                     <span className="rc-view-index">{viewSafeIndex + 1}</span>
-                    <span className="rc-view-position">{viewSafeIndex + 1} of {count}</span>
+                    <span className="rc-view-position">
+                      {viewSafeIndex + 1} of {count}
+                    </span>
                   </header>
                   {currentView?.fullUrl ? (
-                    <img className="rc-view-photo" src={currentView.fullUrl} alt={currentView.name} />
+                    <img
+                      className="rc-view-photo"
+                      src={currentView.fullUrl}
+                      alt={currentView.name}
+                    />
                   ) : null}
                   <h2 className="rc-view-name">{currentView?.name}</h2>
-                  {currentView?.description ? <p className="rc-view-desc">{currentView.description}</p> : null}
+                  {currentView?.description ? (
+                    <p className="rc-view-desc">{currentView.description}</p>
+                  ) : null}
                   <div className="rc-view-coords">
-                    {currentView ? `${currentView.lat.toFixed(5)}, ${currentView.lng.toFixed(5)}` : ''}
+                    {currentView
+                      ? `${currentView.lat.toFixed(5)}, ${currentView.lng.toFixed(5)}`
+                      : ''}
                   </div>
-                  <Button variant="outline" onClick={startEditFromView}>Edit waypoint</Button>
+                  <Button variant="outline" onClick={startEditFromView}>
+                    Edit waypoint
+                  </Button>
                 </article>
                 <div className="rc-view-nav">
-                  <Button variant="secondary" onClick={() => stepView(-1)} disabled={viewSafeIndex === 0}>Previous</Button>
-                  <Button variant="secondary" onClick={() => stepView(1)} disabled={viewSafeIndex === count - 1}>Next</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => stepView(-1)}
+                    disabled={viewSafeIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => stepView(1)}
+                    disabled={viewSafeIndex === count - 1}
+                  >
+                    Next
+                  </Button>
                 </div>
               </>
             )}
@@ -322,25 +382,35 @@ export default function RouteCreator() {
               onLngChange={photo.setLng}
               required
             />
-            <DragPinHandle dropTargetRef={mapContainerRef} onDrop={handlePinDrop} />
-            <GpsStatus message={photo.gpsStatus.message} kind={photo.gpsStatus.kind} />
+            <DragPinHandle
+              dropTargetRef={mapContainerRef}
+              onDrop={handlePinDrop}
+            />
+            <GpsStatus
+              message={photo.gpsStatus.message}
+              kind={photo.gpsStatus.kind}
+            />
             <TextField
               label="Waypoint Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               required
               placeholder="e.g. Brooklyn Bridge"
             />
             <TextAreaField
               label="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               placeholder="Describe this stop..."
             />
             <div className="rc-form-actions">
-              <Button type="submit">{editingId !== null ? 'Update Waypoint' : 'Add Waypoint'}</Button>
+              <Button type="submit">
+                {editingId !== null ? 'Update Waypoint' : 'Add Waypoint'}
+              </Button>
               {editingId !== null ? (
-                <Button variant="secondary" onClick={cancelEdit}>Cancel</Button>
+                <Button variant="secondary" onClick={cancelEdit}>
+                  Cancel
+                </Button>
               ) : null}
             </div>
           </form>
@@ -349,7 +419,9 @@ export default function RouteCreator() {
         <div className="rc-route-panel">
           <div className="rc-route-header">
             <h3>Route</h3>
-            <span className="rc-count">{count} waypoint{count === 1 ? '' : 's'}</span>
+            <span className="rc-count">
+              {count} waypoint{count === 1 ? '' : 's'}
+            </span>
           </div>
           {count === 0 ? (
             <p className="rc-empty">Add a waypoint to start the route.</p>
@@ -365,7 +437,9 @@ export default function RouteCreator() {
                   )}
                   <div className="rc-list-info">
                     <div className="rc-list-title">{w.name}</div>
-                    <div className="rc-list-coords">{w.lat.toFixed(4)}, {w.lng.toFixed(4)}</div>
+                    <div className="rc-list-coords">
+                      {w.lat.toFixed(4)}, {w.lng.toFixed(4)}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -388,7 +462,9 @@ export default function RouteCreator() {
             </ol>
           )}
           {count > 0 ? (
-            <Button variant="danger" onClick={clearRoute}>Clear Route</Button>
+            <Button variant="danger" onClick={clearRoute}>
+              Clear Route
+            </Button>
           ) : null}
         </div>
       </div>

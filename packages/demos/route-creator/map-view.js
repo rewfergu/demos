@@ -7,8 +7,8 @@ export function initMap(container) {
   const map = new maplibregl.Map({
     container,
     style: MAP_STYLE_URL,
-    center: [0, 20],
-    zoom: 8,
+    // center: [0, 20],
+    // zoom: 8,
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -68,8 +68,9 @@ export function initRoute(map) {
   else map.once('load', setup);
 }
 
-export function createRouteRenderer(map) {
+export function createRouteRenderer(map, onMarkerClick) {
   let markers = [];
+  let lastWaypointKey = '';
 
   const render = (waypoints, activeIndex = -1) => {
     markers.forEach(m => m.remove());
@@ -96,34 +97,22 @@ export function createRouteRenderer(map) {
       inner.textContent = String(i + 1);
       el.appendChild(inner);
 
-      const content = document.createElement('div');
-      content.className = 'marker-popup';
-      if (w.thumbUrl) {
-        const img = document.createElement('img');
-        img.src = w.thumbUrl;
-        img.alt = w.name;
-        content.append(img);
-      }
-      const h3 = document.createElement('h3');
-      h3.textContent = `${i + 1}. ${w.name}`;
-      content.append(h3);
-      if (w.description) {
-        const p = document.createElement('p');
-        p.textContent = w.description;
-        content.append(p);
-      }
-
-      const popup = new maplibregl.Popup({
-        offset: 20,
-        maxWidth: '280px',
-      }).setDOMContent(content);
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        onMarkerClick?.(i);
+      });
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([w.lng, w.lat])
-        .setPopup(popup)
         .addTo(map);
       markers.push(marker);
     });
+
+    const key = waypoints.map(w => `${w.id}:${w.lat}:${w.lng}`).join('|');
+    const waypointsChanged = key !== lastWaypointKey;
+    lastWaypointKey = key;
+
+    if (!waypointsChanged) return;
 
     if (waypoints.length >= 2) {
       const bounds = new maplibregl.LngLatBounds();
