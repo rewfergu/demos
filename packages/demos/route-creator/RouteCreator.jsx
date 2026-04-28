@@ -231,13 +231,11 @@ export default function RouteCreator() {
   };
 
   const flyToWaypoint = (w, listIndex) => {
-    if (editingId !== null && editingId !== w.id) {
-      if (!confirmDiscardIfEditing()) return;
-      exitEditMode();
-    }
-    if (mode === 'view') setViewIndex(listIndex);
+    if (!confirmDiscardIfEditing()) return;
+    if (editingId !== null) exitEditMode();
+    setMode('view');
+    setViewIndex(listIndex);
     mapRef.current?.flyTo({ center: [w.lng, w.lat], zoom: 18 });
-    console.log('flyToWaypoint', w);
   };
 
   const clearRoute = () => {
@@ -427,13 +425,18 @@ export default function RouteCreator() {
             <p className="rc-empty">Add a waypoint to start the route.</p>
           ) : (
             <ol className="rc-list">
-              {waypoints.map((w, i) => (
+              {waypoints.map((w, i) => {
+                const isActive =
+                  (mode === 'view' && i === viewSafeIndex) ||
+                  (mode === 'edit' && w.id === editingId);
+                return (
                 <li
                   key={w.id}
-                  className="rc-list-item"
+                  className={`rc-list-item ${isActive ? 'rc-list-item-active' : ''}`}
                   role="button"
                   tabIndex={0}
                   aria-label={`Show waypoint ${i + 1}`}
+                  aria-current={isActive ? 'true' : undefined}
                   onClick={() => flyToWaypoint(w, i)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -443,10 +446,8 @@ export default function RouteCreator() {
                   }}
                 >
                   <span className="rc-list-index">{i + 1}</span>
-                  {w.thumbUrl ? (
+                  {w.thumbUrl && (
                     <img className="rc-list-thumb" src={w.thumbUrl} alt="" />
-                  ) : (
-                    <div className="rc-list-thumb rc-list-thumb-empty" />
                   )}
                   <div className="rc-list-info">
                     <div className="rc-list-title">{w.name}</div>
@@ -466,7 +467,8 @@ export default function RouteCreator() {
                     ×
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ol>
           )}
           {count > 0 ? (

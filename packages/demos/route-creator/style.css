@@ -45,7 +45,9 @@
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   font-family: inherit;
 }
 
@@ -217,6 +219,20 @@
   outline-offset: 2px;
 }
 
+.rc-list-item-active,
+.rc-list-item-active:hover {
+  background: #dbeafe;
+  /* box-shadow: inset 3px 0 0 #2563eb; */
+}
+
+.rc-list-item-active .rc-list-index {
+  background: #2563eb;
+}
+
+.rc-list-item-active .rc-list-title {
+  color: #1e3a8a;
+}
+
 .rc-list-index {
   display: inline-flex;
   align-items: center;
@@ -310,7 +326,10 @@
   font-size: 0.875rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   font-variant-numeric: tabular-nums;
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
 }
 
 .rc-waypoint-marker-active {
@@ -320,7 +339,9 @@
 .rc-waypoint-marker-active .rc-waypoint-marker-inner {
   background: #2563eb;
   transform: scale(1.25);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25), 0 4px 10px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.25),
+    0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 @media (min-width: 768px) {
